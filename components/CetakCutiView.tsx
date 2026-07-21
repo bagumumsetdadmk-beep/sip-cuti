@@ -278,21 +278,21 @@ export default function CetakCutiView({ pengajuan, pegawai, jenisCuti, sisaCuti,
                 )}
 
                 {/* Tanggal & Tujuan */}
-                <div className="flex justify-end mb-4 print:mb-2 font-sans">
+                <div className="flex justify-end mb-4 print:mb-2 font-sans print-date-block">
                   <div className="w-[300px] text-left space-y-1">
                     <p>Demak, {formatDateIndo(selectedPrint.tanggalPengajuan)}</p>
                     <div className="mt-4 print:mt-1">
                       <p>Kepada</p>
                       <p>Yth. {getPegawaiDetail(selectedPrint.pejabatId)?.jabatan || instansi.jabatanKepala}</p>
                       <p>di.</p>
-                      <p className="font-bold underline ml-4">DEMAK</p>
+                      <p className="font-bold underline ml-4 font-sans">DEMAK</p>
                     </div>
                   </div>
                 </div>
 
                 {/* Judul Formulir */}
                 <div className="text-center mb-6 print:mb-2 font-sans">
-                  <h2 className="font-bold text-base uppercase">FORMULIR PERMINTAAN DAN PEMBERIAN CUTI</h2>
+                  <h2 className="font-bold text-xl md:text-2xl uppercase tracking-wide">FORMULIR PERMINTAAN DAN PEMBERIAN CUTI</h2>
                 </div>
 
                 {/* TABEL DATA UTAMA */}

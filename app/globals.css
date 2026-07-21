@@ -68,8 +68,16 @@
   }
 
   #printable-area h2 {
+    font-size: 15px !important;
+    font-weight: bold !important;
+    margin-bottom: 6px !important;
+  }
+
+  /* Increase readability for the date and recipient block (Demak, 21 Juli 2026, Kepada, Yth.) */
+  #printable-area .print-date-block,
+  #printable-area .print-date-block * {
     font-size: 11px !important;
-    margin-bottom: 4px !important;
+    line-height: 1.3 !important;
   }
 
   /* Tighten spacing between table blocks */
@@ -119,10 +127,16 @@
     margin-top: 1px !important;
   }
 
-  /* 7. High-contrast solid black lines for beautiful printing */
+  /* 7. High-contrast solid black lines, text, and images for beautiful printing */
   #printable-area,
   #printable-area * {
+    color: #000000 !important;
     border-color: #000000 !important;
     color-scheme: light !important;
+  }
+
+  /* Make sure images (like QR Codes) are high contrast crisp black-and-white with no grays */
+  #printable-area img {
+    filter: grayscale(100%) contrast(300%) !important;
   }
 }
