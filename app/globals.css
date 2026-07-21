@@ -8,7 +8,7 @@
 
 /* Dedicated signature spacing rule to guarantee blank space for signing both on-screen and printed */
 .signature-space {
-  margin-bottom: 1.8cm !important;
+  margin-bottom: 1.4cm !important;
   display: block !important;
 }
 
@@ -84,7 +84,7 @@
 
   /* Dedicated signature spacing rule to guarantee blank space for signing (Addressing Purple Arrows) */
   #printable-area .signature-space {
-    margin-bottom: 1.8cm !important;
+    margin-bottom: 1.4cm !important;
     display: block !important;
   }
 

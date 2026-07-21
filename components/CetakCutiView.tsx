@@ -484,7 +484,7 @@ export default function CetakCutiView({ pengajuan, pegawai, jenisCuti, sisaCuti,
                         <div className="flex flex-row flex-1 min-h-[110px]">
                           <div className="w-1/3 flex items-center justify-center p-2 shrink-0">
                             {printTtdPemohon ? (
-                              <div className="flex flex-col items-center justify-center p-1.5 border border-black/30 bg-white rounded-md shadow-sm shrink-0">
+                              <div className="flex items-center justify-center shrink-0">
                                 <img
                                   src={pDetail?.qrCodeUrl || `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(`SIP-CUTI SETDA DEMAK - VERIFIKASI PEMOHON\nID Dokumen: ${selectedPrint.id}\nNama Pemohon: ${pDetail?.nama || ''}\nNIP: ${pDetail?.nip || ''}\nStatus TTE: Terverifikasi BSrE/BSSN\nKeperluan: Pengajuan Cuti ${getJenisCutiNama(selectedPrint.jenisCutiId)} selama ${selectedPrint.jumlahHari} hari\nTanggal Pengajuan: ${selectedPrint.tanggalPengajuan || ''}`)}`}
                                   alt="QR Code TTE Pemohon"
@@ -524,14 +524,13 @@ export default function CetakCutiView({ pengajuan, pegawai, jenisCuti, sisaCuti,
                       <div className="col-span-6 flex flex-row">
                         <div className="w-1/3 flex items-center justify-center p-2 shrink-0">
                            {printTtdAtasan ? (
-                             <div className="flex flex-col items-center justify-center p-1.5 border border-black/30 bg-white rounded-md shadow-sm shrink-0">
+                             <div className="flex items-center justify-center shrink-0">
                                <img
                                  src={getPegawaiDetail(selectedPrint.atasanId)?.qrCodeUrl || `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(`SIP-CUTI SETDA DEMAK - PERTIMBANGAN ATASAN LANGSUNG\nID Dokumen: ${selectedPrint.id}\nNama Atasan: ${getPegawaiNama(selectedPrint.atasanId)}\nNIP Atasan: ${getPegawaiNip(selectedPrint.atasanId)}\nJabatan Atasan: ${getPegawaiDetail(selectedPrint.atasanId)?.jabatan || 'Atasan Langsung'}\nStatus TTE: Disetujui secara Elektronik (BSrE/BSSN)\nTanggal Pertimbangan: ${selectedPrint.tanggalPengajuan || ''}`)}`}
                                  alt="QR Code TTE Atasan"
                                  className="w-16 h-16 object-contain"
                                  referrerPolicy="no-referrer"
                                 />
-
                              </div>
                            ) : null}
                         </div>
@@ -566,7 +565,7 @@ export default function CetakCutiView({ pengajuan, pegawai, jenisCuti, sisaCuti,
                       <div className="col-span-6 flex flex-row">
                         <div className="w-1/3 flex items-center justify-center p-2 shrink-0">
                            {printTtdPejabat ? (
-                             <div className="flex flex-col items-center justify-center p-1.5 border border-black/30 bg-white rounded-md shadow-sm shrink-0">
+                             <div className="flex items-center justify-center shrink-0">
                                <img
                                  src={getPegawaiDetail(selectedPrint.pejabatId)?.qrCodeUrl || `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(`SIP-CUTI SETDA DEMAK - KEPUTUSAN PEJABAT YANG BERWENANG\nID Dokumen: ${selectedPrint.id}\nNama Pejabat: ${getPegawaiNama(selectedPrint.pejabatId)}\nNIP Pejabat: ${getPegawaiNip(selectedPrint.pejabatId)}\nJabatan Pejabat: ${getPegawaiDetail(selectedPrint.pejabatId)?.jabatan || 'Pejabat yang Berwenang'}\nStatus TTE: Disetujui & Disahkan secara Elektronik (BSrE/BSSN)\nTanggal Keputusan: ${selectedPrint.tanggalPengajuan || ''}`)}`}
                                  alt="QR Code TTE Pejabat"
