@@ -210,29 +210,6 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-slate-50 flex text-slate-900">
       
-      {/* Global CSS Injector khusus untuk Media Print supaya rapi */}
-      <style>{`
-        @media print {
-          .no-print, aside, header, button, select, input, .no-print * {
-            display: none !important;
-          }
-          body, .min-h-screen, main, .printable-report, #printable-area {
-            background: white !important;
-            color: black !important;
-            padding: 0 !important;
-            margin: 0 !important;
-            width: 100% !important;
-            max-width: 100% !important;
-            box-shadow: none !important;
-            border: none !important;
-            overflow: visible !important;
-          }
-          .printable-report, #printable-area {
-            display: block !important;
-          }
-        }
-      `}</style>
-
       {/* Sidebar Overlay (Mobile) */}
       {isMobileMenuOpen && (
         <div 

@@ -22,84 +22,80 @@
     background-color: white !important;
     background-image: none !important;
     color: black !important;
+    margin: 0 !important;
+    padding: 0 !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
 
-  /* 3. Hide all standard layouts, sidebars, headers, other tabs, and buttons completely */
-  aside, sidebar, header, footer, nav,
-  .no-print,
-  button,
-  [class*="sidebar"],
-  [class*="Sidebar"],
-  [class*="Header"],
-  [class*="header"],
-  [id*="sidebar"],
-  [id*="header"],
-  main > div:not(.fixed),
-  #__next > div:not(.fixed) {
-    display: none !important;
+  /* 3. Pure visibility-based hiding of everything on screen by default */
+  body * {
     visibility: hidden !important;
-    opacity: 0 !important;
-    height: 0 !important;
-    width: 0 !important;
-    padding: 0 !important;
-    margin: 0 !important;
   }
 
-  /* 4. Ensure the parent containers of the printable area do not constrain or shade it */
-  div.fixed.inset-0 {
-    position: relative !important;
-    background: transparent !important;
-    background-color: transparent !important;
-    padding: 0 !important;
-    margin: 0 !important;
-    overflow: visible !important;
-    display: block !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    height: auto !important;
-    z-index: auto !important;
-    box-shadow: none !important;
+  /* 4. Restore visibility only for the printable area and its children */
+  #printable-area, #printable-area * {
+    visibility: visible !important;
   }
 
-  div.bg-white.w-full.max-w-\[850px\] {
-    position: relative !important;
-    background: transparent !important;
-    background-color: transparent !important;
-    border: none !important;
-    box-shadow: none !important;
-    border-radius: 0 !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    height: auto !important;
-    overflow: visible !important;
-    display: block !important;
-  }
-
-  /* 5. Printable area styles - fit exactly to the 1cm page margins */
+  /* 5. Force printable area to cover 100% width and sit at top-left of the page */
   #printable-area {
-    display: block !important;
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
     width: 100% !important;
-    max-width: 100% !important;
     height: auto !important;
-    padding: 0 !important;
     margin: 0 !important;
+    padding: 0 !important;
     border: none !important;
     box-shadow: none !important;
     background: white !important;
     color: black !important;
+    display: block !important;
     overflow: visible !important;
   }
 
-  /* 6. Hide all children of body by default, except the modal with the print area */
-  body > *:not(.fixed) {
-    display: none !important;
+  /* 6. Fine-tuning layout sizes to fit on exactly one sheet of paper (A4 or Folio/F4) */
+  #printable-area {
+    font-size: 11px !important;
+    line-height: 1.25 !important;
   }
 
-  /* 7. Force correct black borders for tables on print */
+  #printable-area h2 {
+    font-size: 13px !important;
+    margin-bottom: 8px !important;
+  }
+
+  /* Tighten spacing between table blocks */
+  #printable-area .border-\[1px\] {
+    margin-bottom: 6px !important;
+  }
+
+  #printable-area p {
+    margin-bottom: 1px !important;
+  }
+
+  /* Custom tight padding for government table structure */
+  #printable-area td, 
+  #printable-area th, 
+  #printable-area div.p-1, 
+  #printable-area div.p-2,
+  #printable-area div.p-3 {
+    padding: 2px 4px !important;
+  }
+
+  /* Ensure QRs are fully readable but fit in the space without wrapping */
+  #printable-area img {
+    width: 60px !important;
+    height: 60px !important;
+  }
+
+  /* Clear default margins on the list block in container */
+  #printable-area div.font-sans.text-xs {
+    gap: 6px !important;
+  }
+
+  /* 7. High-contrast solid black lines for beautiful printing */
   #printable-area,
   #printable-area * {
     border-color: #000000 !important;

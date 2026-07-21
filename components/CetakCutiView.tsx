@@ -228,6 +228,13 @@ export default function CetakCutiView({ pengajuan, pegawai, jenisCuti, sisaCuti,
                   </div>
                 </div>
 
+                {/* Subtitle khusus PPPK */}
+                {!isPNS && (
+                  <div className="text-center mb-6 font-sans text-sm font-semibold max-w-[600px] mx-auto leading-relaxed">
+                    <p>Formulir Permintaan dan Pemberian Cuti Pegawai Pemerintah Dengan Perjanjian Kerja</p>
+                  </div>
+                )}
+
                 {/* Tanggal & Tujuan */}
                 <div className="flex justify-end mb-4 font-sans">
                   <div className="w-[300px] text-left space-y-1">
@@ -395,16 +402,16 @@ export default function CetakCutiView({ pengajuan, pegawai, jenisCuti, sisaCuti,
                     ) : (
                       <div className="grid grid-cols-1">
                         <div className="flex border-b-[0.5px] border-black">
-                          <div className="flex-1 p-1 uppercase">1. CUTI TAHUNAN</div>
-                          <div className="flex-1 p-1 border-l-[0.5px] border-black text-center"></div>
+                          <div className="flex-1 p-1">1. Cuti Tahunan</div>
+                          <div className="w-12 p-1 border-l-[0.5px] border-black text-center">{namaCutiLower.includes('tahunan') ? '✔' : '-'}</div>
                         </div>
                         <div className="flex border-b-[0.5px] border-black">
-                          <div className="flex-1 p-1 uppercase">2. CUTI SAKIT</div>
-                          <div className="flex-1 p-1 border-l-[0.5px] border-black text-center"></div>
+                          <div className="flex-1 p-1">2. Cuti Sakit</div>
+                          <div className="w-12 p-1 border-l-[0.5px] border-black text-center">{namaCutiLower.includes('sakit') ? '✔' : '-'}</div>
                         </div>
                         <div className="flex">
-                          <div className="flex-1 p-1 uppercase">3. CUTI MELAHIRKAN</div>
-                          <div className="flex-1 p-1 border-l-[0.5px] border-black text-center"></div>
+                          <div className="flex-1 p-1">3. Cuti Karena Alasan Penting</div>
+                          <div className="w-12 p-1 border-l-[0.5px] border-black text-center">{namaCutiLower.includes('alasan penting') ? '✔' : '-'}</div>
                         </div>
                       </div>
                     )}
