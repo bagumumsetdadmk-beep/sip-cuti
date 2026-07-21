@@ -119,8 +119,9 @@ export default function Sidebar({ currentMenu, setCurrentMenu, currentUser }: Si
 
       {/* Footer Sidebar */}
       <div className="p-4 border-t border-slate-800 bg-slate-950/80 text-center">
-        <p className="text-[10px] text-slate-500 font-mono">SIP-Cuti Setda V2.0</p>
-        <p className="text-[9px] text-slate-600 font-mono font-medium">© 2025 - 2026 SETDA Demak</p>
+        <p className="text-[11px] text-slate-300 font-sans font-bold leading-normal">
+          SIP-Cuti Setda V2.0, <span className="font-semibold text-slate-400">© 2025 - 2026 SETDA Demak</span>
+        </p>
       </div>
     </aside>
   );

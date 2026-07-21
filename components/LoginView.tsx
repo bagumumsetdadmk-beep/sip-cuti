@@ -67,7 +67,7 @@ export default function LoginView({ users, instansi, onLogin }: LoginViewProps) 
 
         <div className="relative z-10 max-w-xl mt-auto mb-10">
           <span className="inline-block py-1 px-3 rounded-full bg-blue-500/20 border border-blue-400/30 text-blue-200 text-xs font-semibold tracking-wider font-mono mb-6 backdrop-blur-sm">
-            SISTEM MANAJEMEN ASN
+            SISTEM MANAJEMEN CUTI ASN
           </span>
           <h1 className="text-4xl lg:text-5xl font-extrabold text-white leading-[1.15] tracking-tight mb-6 drop-shadow-md">
             Pengelolaan Cuti ASN <span className="text-blue-400">Sekretariat Daerah Kabupaten Demak</span>
@@ -76,15 +76,15 @@ export default function LoginView({ users, instansi, onLogin }: LoginViewProps) 
             Digitalisasi proses pengajuan, verifikasi, hingga pencetakan dokumen cuti pegawai Sekretariat Daerah Kabupaten Demak secara terpusat dan akurat berdasarkan Peraturan BKN.
           </p>
           
-          <div className="flex items-center gap-6 text-xs font-mono text-slate-400 bg-black/20 p-4 rounded-xl border border-white/5 backdrop-blur-sm inline-flex">
-            <span className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-green-400 shadow-[0_0_8px_rgba(74,222,128,0.6)] animate-pulse"></span>
+          <div className="flex items-center gap-6 text-[13px] font-sans text-slate-200 bg-black/30 px-5 py-3.5 rounded-xl border border-white/10 backdrop-blur-sm inline-flex shadow-md">
+            <span className="flex items-center gap-2 font-bold text-green-400">
+              <span className="w-2.5 h-2.5 rounded-full bg-green-400 shadow-[0_0_8px_rgba(74,222,128,0.8)] animate-pulse"></span>
               Sistem Aktif
             </span>
-            <span className="w-1 h-1 rounded-full bg-slate-600"></span>
-            <span>Versi 2.0</span>
-            <span className="w-1 h-1 rounded-full bg-slate-600"></span>
-            <span>© 2025 - 2026 SETDA Demak</span>
+            <span className="w-1.5 h-1.5 rounded-full bg-slate-500"></span>
+            <span className="font-bold">Versi 2.0</span>
+            <span className="w-1.5 h-1.5 rounded-full bg-slate-500"></span>
+            <span className="font-bold text-slate-300">© 2025 - 2026 SETDA Demak</span>
           </div>
         </div>
       </div>
@@ -167,8 +167,9 @@ export default function LoginView({ users, instansi, onLogin }: LoginViewProps) 
           </form>
           
           <div className="md:hidden pt-6 mt-6 border-t border-slate-100 text-center">
-            <p className="text-[10px] text-slate-400 font-mono font-bold tracking-wider">SIP-CUTI SETDA V2.0</p>
-            <p className="text-[10px] text-slate-400 font-mono mt-1">© 2025 - 2026 SETDA Demak</p>
+            <p className="text-xs text-slate-600 font-sans font-bold leading-normal">
+              SIP-Cuti Setda V2.0, <span className="font-semibold text-slate-500">© 2025 - 2026 SETDA Demak</span>
+            </p>
           </div>
         </div>
       </div>
