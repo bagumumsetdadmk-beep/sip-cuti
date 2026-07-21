@@ -47,8 +47,8 @@ interface PengajuanCutiViewProps {
   updatePengajuanStatus: (id: string, status: PengajuanCuti['status'], catatan?: string) => Promise<void>;
   updatePengajuan: (id: string, p: Partial<PengajuanCuti>) => Promise<void>;
   deletePengajuan: (id: string) => Promise<void>;
-  hitungHariKerja: (start: string, end: string) => number;
-  hitungTanggalSelesai: (start: string, days: number) => string;
+  hitungHariKerja: (start: string, end: string, jenisCutiId?: string) => number;
+  hitungTanggalSelesai: (start: string, days: number, jenisCutiId?: string) => string;
   hitungTotalCutiTahunan: (sc: SisaCutiTahunan | undefined) => number;
 }
 
@@ -102,12 +102,12 @@ export default function PengajuanCutiView({
   // Menghitung Tanggal Selesai otomatis jika tanggal mulai dan hari berubah
   useEffect(() => {
     if (formMulai && formHari > 0) {
-      const selesai = hitungTanggalSelesai(formMulai, formHari);
+      const selesai = hitungTanggalSelesai(formMulai, formHari, formJenisCutiId);
       setFormSelesai(selesai);
     } else {
       setFormSelesai('');
     }
-  }, [formMulai, formHari, hitungTanggalSelesai]);
+  }, [formMulai, formHari, formJenisCutiId, hitungTanggalSelesai]);
 
   // Filter Jenis Cuti berdasarkan Status Pegawai & Masa Kerja
   const filteredJenisCuti = React.useMemo(() => {
@@ -142,6 +142,14 @@ export default function PengajuanCutiView({
   const isCutiTahunanSelected = React.useMemo(() => {
     const selected = jenisCuti.find(jc => jc.id === formJenisCutiId);
     return selected ? (selected.nama.toLowerCase().includes('tahunan') || selected.id === 'jc-1') : false;
+  }, [jenisCuti, formJenisCutiId]);
+
+  // Check if selected leave type includes holidays & weekends in its duration (Aturan BKN)
+  const selectedJenisCutiCountsHolidays = React.useMemo(() => {
+    const selected = jenisCuti.find(jc => jc.id === formJenisCutiId);
+    if (!selected) return false;
+    const nameLower = selected.nama.toLowerCase();
+    return nameLower.includes('sakit') || nameLower.includes('melahirkan') || nameLower.includes('besar') || nameLower.includes('luar tanggungan');
   }, [jenisCuti, formJenisCutiId]);
 
   // Reset Jenis Cuti jika yang terpilih tidak lagi tersedia untuk pegawai tersebut
@@ -267,7 +275,7 @@ export default function PengajuanCutiView({
     }
 
     if (formHari === 0) {
-      showToast('Jumlah hari kerja tidak boleh 0!', 'error');
+      showToast('Jumlah hari cuti tidak boleh 0!', 'error');
       return;
     }
 
@@ -485,7 +493,7 @@ export default function PengajuanCutiView({
             }
 
             const days = Number(rawJumlahHari);
-            const selesai = hitungTanggalSelesai(formattedMulai, days);
+            const selesai = hitungTanggalSelesai(formattedMulai, days, targetJenis.id);
 
             await addPengajuan({
               pegawaiId: targetPegawai.id,
@@ -863,7 +871,9 @@ export default function PengajuanCutiView({
                 </div>
 
                 <div className="col-span-2 md:col-span-1 space-y-1">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider font-mono">Jumlah Hari Cuti (Kerja) *</label>
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider font-mono">
+                    {selectedJenisCutiCountsHolidays ? "Jumlah Hari Cuti (Kalender) *" : "Jumlah Hari Cuti (Kerja) *"}
+                  </label>
                   <input
                     type="number"
                     min="1"
@@ -873,13 +883,22 @@ export default function PengajuanCutiView({
                     className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 text-xs text-gray-700 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-mono"
                     placeholder="Misal: 3"
                   />
+                  <p className="text-[9px] text-gray-400">
+                    {selectedJenisCutiCountsHolidays 
+                      ? "Aturan BKN: Hari libur, cuti bersama, dan sabtu/minggu tetap dihitung." 
+                      : "Aturan BKN: Hari libur, cuti bersama, dan sabtu/minggu tidak dihitung."}
+                  </p>
                 </div>
 
                 {/* DURASI AUTO CALCULATE TANGGAL SELESAI */}
                 <div className="col-span-2 p-3 bg-amber-50 text-[11px] rounded border border-amber-100 text-amber-950 font-medium flex items-center justify-between font-mono">
                   <div className="flex items-center gap-1.5">
                     <Calendar className="w-4 h-4 text-amber-600" />
-                    <span>Perkiraan Tanggal Selesai (Melewati Libur & Sabtu/Minggu):</span>
+                    <span>
+                      {selectedJenisCutiCountsHolidays 
+                        ? "Perkiraan Tanggal Selesai (Termasuk Libur & Sabtu/Minggu):" 
+                        : "Perkiraan Tanggal Selesai (Melewati Libur & Sabtu/Minggu):"}
+                    </span>
                   </div>
                   <span className="text-sm font-black bg-amber-200/60 text-amber-950 px-2.5 py-0.5 rounded border border-amber-300">
                     {formSelesai ? formSelesai : '-'}

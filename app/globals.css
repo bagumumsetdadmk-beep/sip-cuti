@@ -5,3 +5,104 @@
     font-size: 17px;
   }
 }
+
+/* CSS Print Stylesheet for Si-Cuti Setda */
+@media print {
+  /* 1. Set paper size to portrait with exactly 1cm margins */
+  @page {
+    size: portrait;
+    margin: 1cm !important;
+  }
+
+  /* 2. Style html and body for pristine printing */
+  html, body {
+    width: 100% !important;
+    height: auto !important;
+    overflow: visible !important;
+    background-color: white !important;
+    background-image: none !important;
+    color: black !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* 3. Hide all standard layouts, sidebars, headers, other tabs, and buttons completely */
+  aside, sidebar, header, footer, nav,
+  .no-print,
+  button,
+  [class*="sidebar"],
+  [class*="Sidebar"],
+  [class*="Header"],
+  [class*="header"],
+  [id*="sidebar"],
+  [id*="header"],
+  main > div:not(.fixed),
+  #__next > div:not(.fixed) {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    height: 0 !important;
+    width: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* 4. Ensure the parent containers of the printable area do not constrain or shade it */
+  div.fixed.inset-0 {
+    position: relative !important;
+    background: transparent !important;
+    background-color: transparent !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    z-index: auto !important;
+    box-shadow: none !important;
+  }
+
+  div.bg-white.w-full.max-w-\[850px\] {
+    position: relative !important;
+    background: transparent !important;
+    background-color: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    overflow: visible !important;
+    display: block !important;
+  }
+
+  /* 5. Printable area styles - fit exactly to the 1cm page margins */
+  #printable-area {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    background: white !important;
+    color: black !important;
+    overflow: visible !important;
+  }
+
+  /* 6. Hide all children of body by default, except the modal with the print area */
+  body > *:not(.fixed) {
+    display: none !important;
+  }
+
+  /* 7. Force correct black borders for tables on print */
+  #printable-area,
+  #printable-area * {
+    border-color: #000000 !important;
+    color-scheme: light !important;
+  }
+}

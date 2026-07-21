@@ -595,12 +595,41 @@ export function useAppData() {
   };
 
   // == HELPERS ==
-  const hitungHariKerja = (startStr: string, endStr: string): number => {
+  const isCountAllDays = (jcId?: string): boolean => {
+    if (!jcId) return false;
+    const jc = jenisCuti.find(j => j.id === jcId);
+    if (!jc) {
+      const lower = jcId.toLowerCase();
+      if (lower.includes('sakit') || lower.includes('melahirkan') || lower.includes('besar') || lower.includes('luar tanggungan')) {
+        return true;
+      }
+      return false;
+    }
+    const nameLower = jc.nama.toLowerCase();
+    if (nameLower.includes('sakit') || nameLower.includes('melahirkan') || nameLower.includes('besar') || nameLower.includes('luar tanggungan')) {
+      return true;
+    }
+    return false;
+  };
+
+  const hitungHariKerja = (startStr: string, endStr: string, jenisCutiId?: string): number => {
     if (!startStr || !endStr) return 0;
     const start = new Date(startStr);
     const end = new Date(endStr);
     if (isNaN(start.getTime()) || isNaN(end.getTime())) return 0;
     if (start > end) return 0;
+
+    const countAll = isCountAllDays(jenisCutiId);
+    if (countAll) {
+      let count = 0;
+      const current = new Date(start);
+      while (current <= end) {
+        count++;
+        current.setDate(current.getDate() + 1);
+      }
+      return count;
+    }
+
     let count = 0;
     const current = new Date(start);
     const liburSet = new Set(hariLibur.map(hl => hl.tanggal));
@@ -617,12 +646,14 @@ export function useAppData() {
     return count;
   };
 
-  const hitungTanggalSelesai = (startStr: string, days: number): string => {
+  const hitungTanggalSelesai = (startStr: string, days: number, jenisCutiId?: string): string => {
     if (!startStr || days <= 0) return '';
     let count = 0;
     const current = new Date(startStr);
     if (isNaN(current.getTime())) return '';
     const liburSet = new Set(hariLibur.map(hl => hl.tanggal));
+    const countAll = isCountAllDays(jenisCutiId);
+
     while (count < days) {
       const day = current.getDay();
       const tzOffset = current.getTimezoneOffset() * 60000; 
@@ -630,7 +661,8 @@ export function useAppData() {
       const dateStr = localISOTime.split('T')[0];      
       const isWeekend = day === 0 || day === 6;
       const isHoliday = liburSet.has(dateStr);
-      if (!isWeekend && !isHoliday) {
+      
+      if (countAll || (!isWeekend && !isHoliday)) {
         count++;
       }
       if (count < days) {
