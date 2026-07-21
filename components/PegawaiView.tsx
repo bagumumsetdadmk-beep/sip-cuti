@@ -34,6 +34,20 @@ export default function PegawaiView({ pegawai, addPegawai, updatePegawai, delete
   const [statusPegawai, setStatusPegawai] = useState<'PNS' | 'PPPK' | 'PPPK PW'>('PNS');
   const [jenisKelamin, setJenisKelamin] = useState<'Laki-laki' | 'Perempuan'>('Laki-laki');
   const [masaKerja, setMasaKerja] = useState('01 Tahun 00 Bulan');
+  const [qrCodeUrl, setQrCodeUrl] = useState('');
+
+  const handleQrUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (evt) => {
+        const base64 = evt.target?.result as string;
+        setQrCodeUrl(base64);
+        showToast('Gambar QR Code berhasil dimuat.', 'success');
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const golongans = [
     'Juru Muda (I/a)', 'Juru Muda Tingkat I (I/b)', 'Juru (I/c)', 'Juru Tingkat I (I/d)',
@@ -66,6 +80,7 @@ export default function PegawaiView({ pegawai, addPegawai, updatePegawai, delete
     setStatusPegawai('PNS');
     setJenisKelamin('Laki-laki');
     setMasaKerja('01 Tahun 00 Bulan');
+    setQrCodeUrl('');
     setShowModal(true);
   };
 
@@ -79,6 +94,7 @@ export default function PegawaiView({ pegawai, addPegawai, updatePegawai, delete
     setStatusPegawai(p.statusPegawai);
     setJenisKelamin(p.jenisKelamin || 'Laki-laki');
     setMasaKerja(p.masaKerja || '01 Tahun 00 Bulan');
+    setQrCodeUrl(p.qrCodeUrl || '');
     setShowModal(true);
   };
 
@@ -105,7 +121,8 @@ export default function PegawaiView({ pegawai, addPegawai, updatePegawai, delete
         statusPegawai,
         jenisKelamin,
         masaKerja,
-        noHp: '-'
+        noHp: '-',
+        qrCodeUrl: qrCodeUrl || undefined
       });
       showToast('Data pegawai berhasil diperbarui.', 'success');
     } else {
@@ -119,7 +136,8 @@ export default function PegawaiView({ pegawai, addPegawai, updatePegawai, delete
         statusPegawai,
         jenisKelamin,
         masaKerja,
-        noHp: '-'
+        noHp: '-',
+        qrCodeUrl: qrCodeUrl || undefined
       });
       showToast('Pegawai baru berhasil ditambahkan.', 'success');
     }
@@ -271,7 +289,14 @@ export default function PegawaiView({ pegawai, addPegawai, updatePegawai, delete
                     <td className="p-4 font-mono text-gray-400">{(currentPage - 1) * itemsPerPage + idx + 1}</td>
                     <td className="p-4">
                       <div className="font-bold text-gray-900">{p.nama}</div>
-                      <div className="text-[10px] text-gray-400 font-mono font-semibold">NIP. {p.nip}</div>
+                      <div className="text-[10px] text-gray-400 font-mono font-semibold flex items-center gap-1.5">
+                        <span>NIP. {p.nip}</span>
+                        {p.qrCodeUrl && (
+                          <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 px-1.5 py-0.2 rounded text-[8px] font-bold" title="QR Code TTE dari BKPSDM Terpasang">
+                            ● QR TTE
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="p-4 font-semibold text-gray-600">{p.jenisKelamin || 'Laki-laki'}</td>
                     <td className="p-4">
@@ -439,6 +464,57 @@ export default function PegawaiView({ pegawai, addPegawai, updatePegawai, delete
                     placeholder="Contoh: 01 Tahun 00 Bulan"
                     className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 text-xs text-gray-700 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-mono"
                   />
+                </div>
+
+                <div className="col-span-2 space-y-2 pt-2 border-t border-gray-100">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider font-mono">
+                      QR Code TTE Pegawai (Dari BKPSDM)
+                    </label>
+                    {qrCodeUrl && (
+                      <button
+                        type="button"
+                        onClick={() => setQrCodeUrl('')}
+                        className="text-[10px] text-red-500 hover:text-red-700 font-bold transition-all"
+                      >
+                        Hapus QR Code
+                      </button>
+                    )}
+                  </div>
+                  
+                  <div className="flex flex-col sm:flex-row items-start gap-4 bg-gray-50 p-3 rounded-lg border border-gray-200">
+                    <div className="w-20 h-20 bg-white border border-gray-300 rounded-lg flex items-center justify-center overflow-hidden shrink-0 shadow-inner">
+                      {qrCodeUrl ? (
+                        <img src={qrCodeUrl} alt="Preview QR" className="w-full h-full object-contain" />
+                      ) : (
+                        <div className="text-gray-300 flex flex-col items-center justify-center">
+                          <span className="text-[9px] font-mono font-bold">KOSONG</span>
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex-1 space-y-2 w-full">
+                      <p className="text-[10px] text-gray-500 leading-normal">
+                        Unggah file gambar QR Code milik pegawai yang diterbitkan oleh BKPSDM atau tempel URL gambarnya di bawah ini.
+                      </p>
+                      
+                      <div className="flex items-center gap-2">
+                        <label className="bg-white hover:bg-gray-100 border border-gray-200 text-gray-700 px-2.5 py-1.5 rounded-md text-[10px] font-bold transition-all shadow-sm cursor-pointer flex items-center gap-1">
+                          <Upload className="w-3.5 h-3.5 text-gray-500" />
+                          <span>Pilih File Gambar</span>
+                          <input type="file" accept="image/*" className="hidden" onChange={handleQrUpload} />
+                        </label>
+                        <span className="text-[10px] text-gray-400 font-medium">atau</span>
+                      </div>
+
+                      <input
+                        type="text"
+                        value={qrCodeUrl}
+                        onChange={(e) => setQrCodeUrl(e.target.value)}
+                        placeholder="Tempel URL Gambar di sini..."
+                        className="w-full bg-white border border-gray-200 rounded-lg px-2.5 py-1 text-[10px] text-gray-700 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-mono"
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
 

@@ -9,6 +9,7 @@ export interface Pegawai {
   jenisKelamin: 'Laki-laki' | 'Perempuan';
   masaKerja: string; // contoh: "01 Tahun 00 Bulan"
   noHp: string;
+  qrCodeUrl?: string; // QR code image URL atau Base64 dari BKPSDM
 }
 
 export interface HariLibur {

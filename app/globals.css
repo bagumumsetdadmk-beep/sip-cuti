@@ -6,12 +6,18 @@
   }
 }
 
+/* Dedicated signature spacing rule to guarantee blank space for signing both on-screen and printed */
+.signature-space {
+  margin-bottom: 1.8cm !important;
+  display: block !important;
+}
+
 /* CSS Print Stylesheet for Si-Cuti Setda */
 @media print {
-  /* 1. Set paper size to portrait with exactly 1cm margins */
+  /* 1. Set paper size to portrait with tight margins to maximize printable area (Addressing Green Arrows) */
   @page {
     size: portrait;
-    margin: 1cm !important;
+    margin: 0.4cm 0.5cm !important;
   }
 
   /* 2. Style html and body for pristine printing */
@@ -55,24 +61,31 @@
     overflow: visible !important;
   }
 
-  /* 6. Fine-tuning layout sizes to fit on exactly one sheet of paper (A4 or Folio/F4) */
+  /* 6. Fine-tuning layout sizes to fit on exactly one sheet of paper (A4 or Folio/F4) (Addressing Red Arrow) */
   #printable-area {
-    font-size: 11px !important;
-    line-height: 1.25 !important;
+    font-size: 9.5px !important;
+    line-height: 1.2 !important;
   }
 
   #printable-area h2 {
-    font-size: 13px !important;
-    margin-bottom: 8px !important;
+    font-size: 11px !important;
+    margin-bottom: 4px !important;
   }
 
   /* Tighten spacing between table blocks */
   #printable-area .border-\[1px\] {
-    margin-bottom: 6px !important;
+    margin-bottom: 4px !important;
   }
 
-  #printable-area p {
+  #printable-area p:not(.signature-space) {
     margin-bottom: 1px !important;
+    margin-top: 0 !important;
+  }
+
+  /* Dedicated signature spacing rule to guarantee blank space for signing (Addressing Purple Arrows) */
+  #printable-area .signature-space {
+    margin-bottom: 1.8cm !important;
+    display: block !important;
   }
 
   /* Custom tight padding for government table structure */
@@ -81,18 +94,29 @@
   #printable-area div.p-1, 
   #printable-area div.p-2,
   #printable-area div.p-3 {
-    padding: 2px 4px !important;
+    padding: 1.5px 3px !important;
   }
 
   /* Ensure QRs are fully readable but fit in the space without wrapping */
   #printable-area img {
-    width: 60px !important;
-    height: 60px !important;
+    width: 55px !important;
+    height: 55px !important;
   }
 
   /* Clear default margins on the list block in container */
   #printable-area div.font-sans.text-xs {
-    gap: 6px !important;
+    gap: 3px !important;
+  }
+
+  /* Target and compact tailwind margin classes during print */
+  #printable-area .print\:mb-2 {
+    margin-bottom: 2px !important;
+  }
+  #printable-area .print\:mb-4 {
+    margin-bottom: 3px !important;
+  }
+  #printable-area .print\:mt-1 {
+    margin-top: 1px !important;
   }
 
   /* 7. High-contrast solid black lines for beautiful printing */

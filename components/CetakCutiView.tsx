@@ -18,6 +18,9 @@ interface CetakCutiViewProps {
 export default function CetakCutiView({ pengajuan, pegawai, jenisCuti, sisaCuti, instansi, currentUser }: CetakCutiViewProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedPrint, setSelectedPrint] = useState<PengajuanCuti | null>(null);
+  const [printTtdPemohon, setPrintTtdPemohon] = useState(true);
+  const [printTtdAtasan, setPrintTtdAtasan] = useState(true);
+  const [printTtdPejabat, setPrintTtdPejabat] = useState(true);
 
   const getPegawaiNama = (id: string) => pegawai.find(p => p.id === id)?.nama || '';
   const getPegawaiDetail = (id: string) => pegawai.find(p => p.id === id);
@@ -139,7 +142,12 @@ export default function CetakCutiView({ pengajuan, pegawai, jenisCuti, sisaCuti,
                           return (
                             <button
                               id={`btn-buka-cetak-${pj.id}`}
-                              onClick={() => setSelectedPrint(pj)}
+                              onClick={() => {
+                                setSelectedPrint(pj);
+                                setPrintTtdPemohon(true);
+                                setPrintTtdAtasan(true);
+                                setPrintTtdPejabat(true);
+                              }}
                               className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 rounded-lg text-sm font-bold transition-all inline-flex items-center gap-1 shadow-sm cursor-pointer"
                             >
                               <Printer className="w-3.5 h-3.5" />
@@ -170,34 +178,68 @@ export default function CetakCutiView({ pengajuan, pegawai, jenisCuti, sisaCuti,
             <div className="bg-white w-full max-w-[850px] shadow-2xl border-0 md:border border-gray-300 md:rounded-xl overflow-hidden flex flex-col my-0 md:my-4 print:my-0">
               
               {/* Toolbar Atas (No-print) */}
-              <div className="p-4 bg-slate-900 text-white flex items-center justify-between no-print shrink-0">
-                <div className="flex items-center gap-2">
-                  <FileCheck className="w-5 h-5 text-amber-400" />
-                  <div>
-                    <h4 className="text-xs font-bold font-mono uppercase">Preview Formulir Cuti Resmi</h4>
-                    <p className="text-[11px] text-blue-200">
-                      {isPNS 
-                        ? 'Format Anak Lampiran 1.b Peraturan BKN No. 24 Tahun 2017 (PNS)' 
-                        : 'Format Lampiran II Peraturan BKN No. 7 Tahun 2022 (PPPK)'}
-                    </p>
+              <div className="p-4 bg-slate-900 text-white flex flex-col gap-3 no-print shrink-0 border-b border-slate-800">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <FileCheck className="w-5 h-5 text-amber-400" />
+                    <div>
+                      <h4 className="text-xs font-bold font-mono uppercase">Preview Formulir Cuti Resmi</h4>
+                      <p className="text-[11px] text-blue-200">
+                        {isPNS 
+                          ? 'Format Anak Lampiran 1.b Peraturan BKN No. 24 Tahun 2017 (PNS)' 
+                          : 'Format Lampiran II Peraturan BKN No. 7 Tahun 2022 (PPPK)'}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      id="btn-cetak-print-dialog"
+                      onClick={handlePrintDocument}
+                      className="px-3.5 py-1.5 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold rounded-lg text-xs flex items-center gap-1.5 shadow transition-all cursor-pointer"
+                    >
+                      <Printer className="w-4 h-4" />
+                      <span>Cetak Sekarang</span>
+                    </button>
+                    <button
+                      id="btn-tutup-cetak"
+                      onClick={() => setSelectedPrint(null)}
+                      className="p-1.5 hover:bg-slate-800 text-white rounded transition-all cursor-pointer"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    id="btn-cetak-print-dialog"
-                    onClick={handlePrintDocument}
-                    className="px-3.5 py-1.5 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold rounded-lg text-xs flex items-center gap-1.5 shadow transition-all cursor-pointer"
-                  >
-                    <Printer className="w-4 h-4" />
-                    <span>Cetak Sekarang</span>
-                  </button>
-                  <button
-                    id="btn-tutup-cetak"
-                    onClick={() => setSelectedPrint(null)}
-                    className="p-1.5 hover:bg-slate-800 text-white rounded transition-all cursor-pointer"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
+
+                {/* TTE Toggles */}
+                <div className="flex flex-wrap items-center gap-x-5 gap-y-2 bg-slate-800/60 p-2 rounded-lg border border-slate-750/50 text-xs">
+                  <span className="font-semibold text-slate-300">Tampilkan TTE (QR Code):</span>
+                  <label className="flex items-center gap-1.5 text-slate-200 hover:text-white cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={printTtdPemohon}
+                      onChange={(e) => setPrintTtdPemohon(e.target.checked)}
+                      className="rounded border-slate-700 bg-slate-850 text-blue-500 focus:ring-blue-500 w-3.5 h-3.5 cursor-pointer"
+                    />
+                    <span>QR Pemohon</span>
+                  </label>
+                  <label className="flex items-center gap-1.5 text-slate-200 hover:text-white cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={printTtdAtasan}
+                      onChange={(e) => setPrintTtdAtasan(e.target.checked)}
+                      className="rounded border-slate-700 bg-slate-850 text-blue-500 focus:ring-blue-500 w-3.5 h-3.5 cursor-pointer"
+                    />
+                    <span>QR Atasan</span>
+                  </label>
+                  <label className="flex items-center gap-1.5 text-slate-200 hover:text-white cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={printTtdPejabat}
+                      onChange={(e) => setPrintTtdPejabat(e.target.checked)}
+                      className="rounded border-slate-700 bg-slate-850 text-blue-500 focus:ring-blue-500 w-3.5 h-3.5 cursor-pointer"
+                    />
+                    <span>QR Pejabat</span>
+                  </label>
                 </div>
               </div>
 
@@ -441,20 +483,19 @@ export default function CetakCutiView({ pengajuan, pegawai, jenisCuti, sisaCuti,
                         {/* Bottom: Signature of Pemohon with optional QR TTE */}
                         <div className="flex flex-row flex-1 min-h-[110px]">
                           <div className="w-1/3 flex items-center justify-center p-2 shrink-0">
-                            {selectedPrint.ttdDigitalPemohon ? (
+                            {printTtdPemohon ? (
                               <div className="flex flex-col items-center justify-center p-1.5 border border-black/30 bg-white rounded-md shadow-sm shrink-0">
                                 <img
-                                  src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(`SIP-CUTI SETDA DEMAK - VERIFIKASI PEMOHON\nID Dokumen: ${selectedPrint.id}\nNama Pemohon: ${pDetail?.nama || ''}\nNIP: ${pDetail?.nip || ''}\nStatus TTE: Terverifikasi BSrE/BSSN\nKeperluan: Pengajuan Cuti ${getJenisCutiNama(selectedPrint.jenisCutiId)} selama ${selectedPrint.jumlahHari} hari\nTanggal Pengajuan: ${selectedPrint.tanggalPengajuan || ''}`)}`}
+                                  src={pDetail?.qrCodeUrl || `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(`SIP-CUTI SETDA DEMAK - VERIFIKASI PEMOHON\nID Dokumen: ${selectedPrint.id}\nNama Pemohon: ${pDetail?.nama || ''}\nNIP: ${pDetail?.nip || ''}\nStatus TTE: Terverifikasi BSrE/BSSN\nKeperluan: Pengajuan Cuti ${getJenisCutiNama(selectedPrint.jenisCutiId)} selama ${selectedPrint.jumlahHari} hari\nTanggal Pengajuan: ${selectedPrint.tanggalPengajuan || ''}`)}`}
                                   alt="QR Code TTE Pemohon"
                                   className="w-16 h-16 object-contain"
                                   referrerPolicy="no-referrer"
                                 />
-                                <span className="text-[6px] font-bold text-gray-500 mt-1.5 uppercase leading-none tracking-wider text-center whitespace-nowrap">TTE BSrE / BSSN</span>
                               </div>
                             ) : null}
                           </div>
                           <div className="w-2/3 p-2 flex flex-col items-center justify-center">
-                            <p className="mb-8 print:mb-4 whitespace-nowrap">Hormat saya,</p>
+                            <p className="signature-space whitespace-nowrap">Hormat saya,</p>
                             <p className="font-bold underline text-center whitespace-nowrap">({pDetail?.nama})</p>
                             <p className="text-center uppercase whitespace-nowrap">{isPNS ? 'NIP' : 'NI PPPK'}. {pDetail?.nip}</p>
                           </div>
@@ -482,20 +523,20 @@ export default function CetakCutiView({ pengajuan, pegawai, jenisCuti, sisaCuti,
                       <div className="col-span-6 border-r-[0.5px] border-black"></div>
                       <div className="col-span-6 flex flex-row">
                         <div className="w-1/3 flex items-center justify-center p-2 shrink-0">
-                           {selectedPrint.ttdDigitalAtasan ? (
+                           {printTtdAtasan ? (
                              <div className="flex flex-col items-center justify-center p-1.5 border border-black/30 bg-white rounded-md shadow-sm shrink-0">
                                <img
-                                 src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(`SIP-CUTI SETDA DEMAK - PERTIMBANGAN ATASAN LANGSUNG\nID Dokumen: ${selectedPrint.id}\nNama Atasan: ${getPegawaiNama(selectedPrint.atasanId)}\nNIP Atasan: ${getPegawaiNip(selectedPrint.atasanId)}\nJabatan Atasan: ${getPegawaiDetail(selectedPrint.atasanId)?.jabatan || 'Atasan Langsung'}\nStatus TTE: Disetujui secara Elektronik (BSrE/BSSN)\nTanggal Pertimbangan: ${selectedPrint.tanggalPengajuan || ''}`)}`}
+                                 src={getPegawaiDetail(selectedPrint.atasanId)?.qrCodeUrl || `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(`SIP-CUTI SETDA DEMAK - PERTIMBANGAN ATASAN LANGSUNG\nID Dokumen: ${selectedPrint.id}\nNama Atasan: ${getPegawaiNama(selectedPrint.atasanId)}\nNIP Atasan: ${getPegawaiNip(selectedPrint.atasanId)}\nJabatan Atasan: ${getPegawaiDetail(selectedPrint.atasanId)?.jabatan || 'Atasan Langsung'}\nStatus TTE: Disetujui secara Elektronik (BSrE/BSSN)\nTanggal Pertimbangan: ${selectedPrint.tanggalPengajuan || ''}`)}`}
                                  alt="QR Code TTE Atasan"
                                  className="w-16 h-16 object-contain"
                                  referrerPolicy="no-referrer"
                                 />
-                               <span className="text-[6px] font-bold text-gray-500 mt-1.5 uppercase leading-none tracking-wider text-center whitespace-nowrap">TTE BSrE / BSSN</span>
+
                              </div>
                            ) : null}
                         </div>
                         <div className="w-2/3 p-2 flex flex-col items-center">
-                          <p className="font-bold text-center leading-tight mb-8 print:mb-4">
+                          <p className="font-bold text-center leading-tight signature-space">
                             {getPegawaiDetail(selectedPrint.atasanId)?.jabatan}
                           </p>
                           <p className="font-bold underline text-center whitespace-nowrap">({getPegawaiNama(selectedPrint.atasanId)})</p>
@@ -524,20 +565,19 @@ export default function CetakCutiView({ pengajuan, pegawai, jenisCuti, sisaCuti,
                       <div className="col-span-6 border-r-[0.5px] border-black"></div>
                       <div className="col-span-6 flex flex-row">
                         <div className="w-1/3 flex items-center justify-center p-2 shrink-0">
-                           {selectedPrint.ttdDigitalPejabat ? (
+                           {printTtdPejabat ? (
                              <div className="flex flex-col items-center justify-center p-1.5 border border-black/30 bg-white rounded-md shadow-sm shrink-0">
                                <img
-                                 src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(`SIP-CUTI SETDA DEMAK - KEPUTUSAN PEJABAT YANG BERWENANG\nID Dokumen: ${selectedPrint.id}\nNama Pejabat: ${getPegawaiNama(selectedPrint.pejabatId)}\nNIP Pejabat: ${getPegawaiNip(selectedPrint.pejabatId)}\nJabatan Pejabat: ${getPegawaiDetail(selectedPrint.pejabatId)?.jabatan || 'Pejabat yang Berwenang'}\nStatus TTE: Disetujui & Disahkan secara Elektronik (BSrE/BSSN)\nTanggal Keputusan: ${selectedPrint.tanggalPengajuan || ''}`)}`}
+                                 src={getPegawaiDetail(selectedPrint.pejabatId)?.qrCodeUrl || `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(`SIP-CUTI SETDA DEMAK - KEPUTUSAN PEJABAT YANG BERWENANG\nID Dokumen: ${selectedPrint.id}\nNama Pejabat: ${getPegawaiNama(selectedPrint.pejabatId)}\nNIP Pejabat: ${getPegawaiNip(selectedPrint.pejabatId)}\nJabatan Pejabat: ${getPegawaiDetail(selectedPrint.pejabatId)?.jabatan || 'Pejabat yang Berwenang'}\nStatus TTE: Disetujui & Disahkan secara Elektronik (BSrE/BSSN)\nTanggal Keputusan: ${selectedPrint.tanggalPengajuan || ''}`)}`}
                                  alt="QR Code TTE Pejabat"
                                  className="w-16 h-16 object-contain"
                                  referrerPolicy="no-referrer"
                                />
-                               <span className="text-[6px] font-bold text-gray-500 mt-1.5 uppercase leading-none tracking-wider text-center whitespace-nowrap">TTE BSrE / BSSN</span>
                              </div>
                            ) : null}
                         </div>
                         <div className="w-2/3 p-2 flex flex-col items-center">
-                          <p className="font-bold text-center leading-tight mb-8 print:mb-4">
+                          <p className="font-bold text-center leading-tight signature-space">
                             {getPegawaiDetail(selectedPrint.pejabatId)?.jabatan}
                           </p>
                           <p className="font-bold underline text-center whitespace-nowrap">({getPegawaiNama(selectedPrint.pejabatId)})</p>

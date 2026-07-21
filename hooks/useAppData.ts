@@ -7,18 +7,22 @@ import { supabase } from '../lib/supabase';
 import { initialUsers, defaultPengaturanInstansi, initialPegawai, initialHariLibur, initialAtasanPejabat, initialJenisCuti, initialSisaCutiTahunan, initialPengajuanCuti } from '../lib/initialData';
 
 // Helper mapping functions
-const mapPegawai = (p: any): Pegawai => ({
-  id: p.id,
-  nip: p.nip,
-  nama: p.nama,
-  jabatan: p.jabatan,
-  golongan: p.golongan || '',
-  unitKerja: p.unit_kerja,
-  statusPegawai: p.status_pegawai,
-  jenisKelamin: p.jenis_kelamin || 'Laki-laki',
-  masaKerja: p.masa_kerja || '',
-  noHp: p.no_hp || ''
-});
+const mapPegawai = (p: any): Pegawai => {
+  const localQr = typeof window !== 'undefined' ? localStorage.getItem(`pegawai_qr_${p.id}`) : undefined;
+  return {
+    id: p.id,
+    nip: p.nip,
+    nama: p.nama,
+    jabatan: p.jabatan,
+    golongan: p.golongan || '',
+    unitKerja: p.unit_kerja,
+    statusPegawai: p.status_pegawai,
+    jenisKelamin: p.jenis_kelamin || 'Laki-laki',
+    masaKerja: p.masa_kerja || '',
+    noHp: p.no_hp || '',
+    qrCodeUrl: p.qr_code_url || localQr || undefined
+  };
+};
 
 const mapJenisCuti = (j: any): JenisCuti => ({
   id: j.id,
@@ -200,7 +204,7 @@ export function useAppData() {
 
   // == CRUD PEGAWAI ==
   const addPegawai = async (p: Omit<Pegawai, 'id'>) => {
-    const payload = {
+    const payload: any = {
       nip: p.nip,
       nama: p.nama,
       jabatan: p.jabatan,
@@ -209,13 +213,31 @@ export function useAppData() {
       status_pegawai: p.statusPegawai,
       golongan: p.golongan,
       jenis_kelamin: p.jenisKelamin,
-      no_hp: p.noHp
+      no_hp: p.noHp,
+      qr_code_url: p.qrCodeUrl || null
     };
     const { data, error } = await supabase.from('pegawai').insert(payload).select().single();
     if (!error && data) {
+      if (p.qrCodeUrl) {
+        localStorage.setItem(`pegawai_qr_${data.id}`, p.qrCodeUrl);
+      }
       setPegawai([mapPegawai(data), ...pegawai]);
     } else {
       console.error(error);
+      // Fallback if column qr_code_url doesn't exist yet in Supabase
+      const fallbackPayload = { ...payload };
+      delete fallbackPayload.qr_code_url;
+      const { data: fallbackData, error: fallbackError } = await supabase.from('pegawai').insert(fallbackPayload).select().single();
+      if (!fallbackError && fallbackData) {
+        if (p.qrCodeUrl) {
+          localStorage.setItem(`pegawai_qr_${fallbackData.id}`, p.qrCodeUrl);
+        }
+        const mapped = mapPegawai(fallbackData);
+        if (p.qrCodeUrl) mapped.qrCodeUrl = p.qrCodeUrl;
+        setPegawai([mapped, ...pegawai]);
+      } else {
+        console.error(fallbackError);
+      }
     }
   };
 
@@ -230,10 +252,38 @@ export function useAppData() {
     if (p.golongan !== undefined) payload.golongan = p.golongan;
     if (p.jenisKelamin !== undefined) payload.jenis_kelamin = p.jenisKelamin;
     if (p.noHp !== undefined) payload.no_hp = p.noHp;
+    if (p.qrCodeUrl !== undefined) payload.qr_code_url = p.qrCodeUrl || null;
 
     const { data, error } = await supabase.from('pegawai').update(payload).eq('id', id).select().single();
     if (!error && data) {
+      if (p.qrCodeUrl !== undefined) {
+        if (p.qrCodeUrl) {
+          localStorage.setItem(`pegawai_qr_${id}`, p.qrCodeUrl);
+        } else {
+          localStorage.removeItem(`pegawai_qr_${id}`);
+        }
+      }
       setPegawai(pegawai.map(item => item.id === id ? mapPegawai(data) : item));
+    } else {
+      console.error(error);
+      // Fallback if column qr_code_url doesn't exist yet in Supabase
+      const fallbackPayload = { ...payload };
+      delete fallbackPayload.qr_code_url;
+      const { data: fallbackData, error: fallbackError } = await supabase.from('pegawai').update(fallbackPayload).eq('id', id).select().single();
+      if (!fallbackError && fallbackData) {
+        if (p.qrCodeUrl !== undefined) {
+          if (p.qrCodeUrl) {
+            localStorage.setItem(`pegawai_qr_${id}`, p.qrCodeUrl);
+          } else {
+            localStorage.removeItem(`pegawai_qr_${id}`);
+          }
+        }
+        const mapped = mapPegawai(fallbackData);
+        if (p.qrCodeUrl) mapped.qrCodeUrl = p.qrCodeUrl;
+        setPegawai(pegawai.map(item => item.id === id ? mapped : item));
+      } else {
+        console.error(fallbackError);
+      }
     }
   };
 

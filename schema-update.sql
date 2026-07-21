@@ -5,6 +5,7 @@
 ALTER TABLE pegawai ADD COLUMN IF NOT EXISTS golongan VARCHAR(50);
 ALTER TABLE pegawai ADD COLUMN IF NOT EXISTS jenis_kelamin VARCHAR(20) DEFAULT 'Laki-laki';
 ALTER TABLE pegawai ADD COLUMN IF NOT EXISTS no_hp VARCHAR(50);
+ALTER TABLE pegawai ADD COLUMN IF NOT EXISTS qr_code_url TEXT;
 
 -- 2. Kolom hak_pegawai untuk jenis cuti
 ALTER TABLE jenis_cuti ADD COLUMN IF NOT EXISTS hak_pegawai VARCHAR(50) DEFAULT 'Semua';
