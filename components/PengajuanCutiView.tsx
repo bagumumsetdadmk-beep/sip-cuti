@@ -1,7 +1,7 @@
 'use client';
 
 /* eslint-disable react-hooks/set-state-in-effect */
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import * as XLSX from 'xlsx';
 import { 
   Plus, 
@@ -50,6 +50,7 @@ interface PengajuanCutiViewProps {
   hitungHariKerja: (start: string, end: string, jenisCutiId?: string) => number;
   hitungTanggalSelesai: (start: string, days: number, jenisCutiId?: string) => string;
   hitungTotalCutiTahunan: (sc: SisaCutiTahunan | undefined) => number;
+  isApprovalPage?: boolean;
 }
 
 export default function PengajuanCutiView({
@@ -65,7 +66,8 @@ export default function PengajuanCutiView({
   deletePengajuan,
   hitungHariKerja,
   hitungTanggalSelesai,
-  hitungTotalCutiTahunan
+  hitungTotalCutiTahunan,
+  isApprovalPage = false
 }: PengajuanCutiViewProps) {
   const { showToast } = useToast();
   
@@ -91,13 +93,15 @@ export default function PengajuanCutiView({
   const [isUploading, setIsUploading] = useState(false);
   const [formAtasanId, setFormAtasanId] = useState('');
   const [formPejabatId, setFormPejabatId] = useState('');
-  const [formTtdDigitalPemohon, setFormTtdDigitalPemohon] = useState(false);
-  const [formTtdDigitalAtasan, setFormTtdDigitalAtasan] = useState(false);
-  const [formTtdDigitalPejabat, setFormTtdDigitalPejabat] = useState(false);
+  const [formMetodeTtd, setFormMetodeTtd] = useState<'TTE' | 'MANUAL'>('TTE');
+  const [formTtdDigitalPemohon, setFormTtdDigitalPemohon] = useState(true);
+  const [formTtdDigitalAtasan, setFormTtdDigitalAtasan] = useState(true);
+  const [formTtdDigitalPejabat, setFormTtdDigitalPejabat] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
 
   // Approval Modal States
   const [appCatatan, setAppCatatan] = useState('');
+  const [isViewOnlyModal, setIsViewOnlyModal] = useState(false);
 
   // Menghitung Tanggal Selesai otomatis jika tanggal mulai dan hari berubah
   useEffect(() => {
@@ -188,13 +192,66 @@ export default function PengajuanCutiView({
   const getPegawaiNip = (id: string) => pegawai.find(p => p.id === id)?.nip || '-';
   const getJenisCutiNama = (id: string) => jenisCuti.find(jc => jc.id === id)?.nama || 'Cuti';
 
-  // Filter pengajuan:
-  // - Admin: bisa lihat semua
-  // - Verifikator: bisa lihat semua atau yang ditujukan kepadanya
-  // - Operator: hanya bisa lihat yang diajukan oleh/untuk dirinya (jika terhubung dengan data pegawainya)
+  const isHariKalender = (jenisCutiId: string) => {
+    const selected = jenisCuti.find(jc => jc.id === jenisCutiId);
+    if (!selected) return false;
+    const nameLower = selected.nama.toLowerCase();
+    return nameLower.includes('sakit') || nameLower.includes('melahirkan') || nameLower.includes('besar') || nameLower.includes('luar tanggungan');
+  };
+
+  // State tab filter alur persetujuan
+  const [activeStageTab, setActiveStageTab] = useState<'semua' | 'verifikator' | 'atasan' | 'pejabat' | 'disetujui' | 'ditolak'>('semua');
+
+  useEffect(() => {
+    if (currentUser?.role === 'Atasan') {
+      setActiveStageTab('atasan');
+    } else if (currentUser?.role === 'Pejabat') {
+      setActiveStageTab('pejabat');
+    } else if (currentUser?.role === 'Verifikator') {
+      setActiveStageTab('verifikator');
+    }
+  }, [currentUser, isApprovalPage]);
+
+  // Filter pengajuan berdasarkan hak akses akun:
+  // - Admin, Verifikator, Operator: melihat seluruh data pengajuan
+  // - Atasan: HANYA melihat pengajuan yang menunjuk dirinya sebagai Atasan Langsung (atasanId)
+  // - Pejabat: HANYA melihat pengajuan yang menunjuk dirinya sebagai Pejabat Berwenang (pejabatId)
+  // - Pegawai: melihat pengajuan miliknya sendiri ATAU pengajuan yang menunjuk dirinya sebagai atasan/pejabat
+  const userPengajuan = useMemo(() => {
+    if (!currentUser) return pengajuan;
+
+    if (currentUser.role === 'Admin' || currentUser.role === 'Verifikator' || currentUser.role === 'Operator') {
+      return pengajuan;
+    }
+
+    if (currentUser.role === 'Atasan') {
+      if (currentUser.pegawaiId) {
+        return pengajuan.filter(pj => pj.atasanId === currentUser.pegawaiId);
+      }
+      return pengajuan;
+    }
+
+    if (currentUser.role === 'Pejabat') {
+      if (currentUser.pegawaiId) {
+        return pengajuan.filter(pj => pj.pejabatId === currentUser.pegawaiId);
+      }
+      return pengajuan;
+    }
+
+    if (currentUser.pegawaiId) {
+      return pengajuan.filter(pj => 
+        pj.pegawaiId === currentUser.pegawaiId ||
+        pj.atasanId === currentUser.pegawaiId ||
+        pj.pejabatId === currentUser.pegawaiId
+      );
+    }
+
+    return pengajuan;
+  }, [pengajuan, currentUser]);
+
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
-  const filteredPengajuanBase = pengajuan.filter(pj => {
+  const filteredPengajuanBase = userPengajuan.filter(pj => {
     // Filter Pencarian
     const matchesSearch = 
       getPegawaiNama(pj.pegawaiId).toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -203,7 +260,19 @@ export default function PengajuanCutiView({
 
     if (!matchesSearch) return false;
 
-    // - Operator: bisa lihat semua karena bertindak sebagai pemohon/inputer
+    // Filter Berdasarkan Tab Alur Approval
+    if (activeStageTab === 'verifikator') {
+      if (pj.status !== 'Menunggu' && pj.status !== 'Sudah Diperbaiki' && pj.status !== 'Dalam Perbaikan') return false;
+    } else if (activeStageTab === 'atasan') {
+      if (pj.status !== 'Menunggu Atasan') return false;
+    } else if (activeStageTab === 'pejabat') {
+      if (pj.status !== 'Menunggu Pejabat') return false;
+    } else if (activeStageTab === 'disetujui') {
+      if (pj.status !== 'Disetujui') return false;
+    } else if (activeStageTab === 'ditolak') {
+      if (pj.status !== 'Ditolak' && pj.status !== 'Dalam Perbaikan') return false;
+    }
+
     return true;
   });
   const totalPages = Math.ceil(filteredPengajuanBase.length / itemsPerPage);
@@ -225,9 +294,10 @@ export default function PengajuanCutiView({
     setFormAlamat('');
     setFormNoTelp('');
     setFormBerkasPendukung(undefined);
-    setFormTtdDigitalPemohon(false);
-    setFormTtdDigitalAtasan(false);
-    setFormTtdDigitalPejabat(false);
+    setFormMetodeTtd('TTE');
+    setFormTtdDigitalPemohon(true);
+    setFormTtdDigitalAtasan(true);
+    setFormTtdDigitalPejabat(true);
     setShowFormModal(true);
   };
 
@@ -250,15 +320,26 @@ export default function PengajuanCutiView({
     setFormBerkasPendukung(pj.berkasPendukung);
     setFormAtasanId(pj.atasanId);
     setFormPejabatId(pj.pejabatId);
-    setFormTtdDigitalPemohon(pj.ttdDigitalPemohon || false);
-    setFormTtdDigitalAtasan(pj.ttdDigitalAtasan || false);
-    setFormTtdDigitalPejabat(pj.ttdDigitalPejabat || false);
+    
+    const isManual = pj.metodePenandatanganan === 'MANUAL' || pj.ttdDigitalAtasan === false || pj.ttdDigitalPejabat === false;
+    setFormMetodeTtd(isManual ? 'MANUAL' : 'TTE');
+    setFormTtdDigitalPemohon(!isManual);
+    setFormTtdDigitalAtasan(!isManual);
+    setFormTtdDigitalPejabat(!isManual);
     setShowFormModal(true);
+  };
+
+  const openDetailModal = (pj: PengajuanCuti) => {
+    setSelectedPj(pj);
+    setAppCatatan('');
+    setIsViewOnlyModal(true);
+    setShowApprovalModal(true);
   };
 
   const openApprovalModal = (pj: PengajuanCuti) => {
     setSelectedPj(pj);
     setAppCatatan('');
+    setIsViewOnlyModal(false);
     setShowApprovalModal(true);
   };
 
@@ -326,9 +407,10 @@ export default function PengajuanCutiView({
         atasanId: formAtasanId,
         pejabatId: formPejabatId,
         nomorSurat: formNomorSurat,
-        ttdDigitalPemohon: formTtdDigitalPemohon,
-        ttdDigitalAtasan: formTtdDigitalAtasan,
-        ttdDigitalPejabat: formTtdDigitalPejabat,
+        metodePenandatanganan: formMetodeTtd,
+        ttdDigitalPemohon: formMetodeTtd === 'TTE',
+        ttdDigitalAtasan: formMetodeTtd === 'TTE',
+        ttdDigitalPejabat: formMetodeTtd === 'TTE',
         status: newStatus
       });
       showToast('Pengajuan cuti berhasil diperbarui.', 'success');
@@ -347,9 +429,10 @@ export default function PengajuanCutiView({
         atasanId: formAtasanId,
         pejabatId: formPejabatId,
         nomorSurat: formNomorSurat,
-        ttdDigitalPemohon: formTtdDigitalPemohon,
-        ttdDigitalAtasan: formTtdDigitalAtasan,
-        ttdDigitalPejabat: formTtdDigitalPejabat
+        metodePenandatanganan: formMetodeTtd,
+        ttdDigitalPemohon: formMetodeTtd === 'TTE',
+        ttdDigitalAtasan: formMetodeTtd === 'TTE',
+        ttdDigitalPejabat: formMetodeTtd === 'TTE'
       });
       showToast('Pengajuan cuti baru berhasil ditambahkan.', 'success');
     }
@@ -357,13 +440,53 @@ export default function PengajuanCutiView({
     setShowFormModal(false);
   };
 
-  const handleApprovalAction = (status: PengajuanCuti['status']) => {
-    if (selectedPj) {
-      updatePengajuanStatus(selectedPj.id, status, appCatatan);
-      showToast(`Status pengajuan berhasil diubah menjadi ${status}.`, status === 'Disetujui' ? 'success' : status === 'Ditolak' ? 'error' : 'info');
-      setShowApprovalModal(false);
-      setSelectedPj(null);
+  const handleApprovalAction = (actionType: PengajuanCuti['status']) => {
+    if (!selectedPj) return;
+
+    let targetStatus: PengajuanCuti['status'] = actionType;
+
+    if (actionType === 'Disetujui') {
+      // 1. Verifikator Approval Stage (Menunggu / Sudah Diperbaiki / Dalam Perbaikan)
+      if (selectedPj.status === 'Menunggu' || selectedPj.status === 'Sudah Diperbaiki' || selectedPj.status === 'Dalam Perbaikan') {
+        if (selectedPj.ttdDigitalAtasan) {
+          targetStatus = 'Menunggu Atasan';
+        } else {
+          // Manual TTD Basah -> Directly approved upon Verifikator approval
+          targetStatus = 'Disetujui';
+        }
+      }
+      // 2. Atasan Langsung Approval Stage (Menunggu Atasan)
+      else if (selectedPj.status === 'Menunggu Atasan') {
+        if (selectedPj.ttdDigitalPejabat) {
+          targetStatus = 'Menunggu Pejabat';
+        } else {
+          targetStatus = 'Disetujui';
+        }
+      }
+      // 3. Pejabat Penanggung Jawab Approval Stage (Menunggu Pejabat)
+      else if (selectedPj.status === 'Menunggu Pejabat') {
+        targetStatus = 'Disetujui';
+      }
     }
+
+    updatePengajuanStatus(selectedPj.id, targetStatus, appCatatan);
+
+    let toastMsg = `Status pengajuan berhasil diperbarui.`;
+    if (targetStatus === 'Menunggu Atasan') {
+      toastMsg = 'Verifikasi Bagian disetujui! Berkas berhasil diteruskan ke Atasan Langsung untuk TTE QR Code.';
+    } else if (targetStatus === 'Menunggu Pejabat') {
+      toastMsg = 'Persetujuan Atasan Langsung berhasil! Berkas diteruskan ke Pejabat Penanggung Jawab untuk TTE QR Code final.';
+    } else if (targetStatus === 'Disetujui') {
+      toastMsg = 'Pengajuan Cuti telah disetujui sepenuhnya dan kini siap untuk dicetak!';
+    } else if (targetStatus === 'Ditolak') {
+      toastMsg = 'Pengajuan cuti ditolak.';
+    } else if (targetStatus === 'Dalam Perbaikan') {
+      toastMsg = 'Berkas dikembalikan ke Operator/Pemohon untuk perbaikan.';
+    }
+
+    showToast(toastMsg, targetStatus === 'Disetujui' ? 'success' : targetStatus === 'Ditolak' ? 'error' : 'info');
+    setShowApprovalModal(false);
+    setSelectedPj(null);
   };
 
   const handleDelete = () => {
@@ -375,10 +498,47 @@ export default function PengajuanCutiView({
     }
   };
 
-  const isVerifikatorForThis = (pj: PengajuanCuti) => {
-    if (currentUser?.role === 'Admin') return true;
-    if (currentUser?.role === 'Verifikator') return true;
+  const canApprove = (pj: PengajuanCuti) => {
+    if (!currentUser) return false;
+    if (currentUser.role === 'Admin') return true;
+    if (currentUser.role === 'Operator') return false;
+
+    // Stage 1: Verifikasi Bagian
+    if (pj.status === 'Menunggu' || pj.status === 'Sudah Diperbaiki' || pj.status === 'Dalam Perbaikan') {
+      return currentUser.role === 'Verifikator';
+    }
+
+    // Stage 2: TTE Atasan Langsung
+    if (pj.status === 'Menunggu Atasan') {
+      if (currentUser.role === 'Verifikator') return true;
+      if (currentUser.role === 'Atasan') {
+        if (currentUser.pegawaiId) {
+          return currentUser.pegawaiId === pj.atasanId;
+        }
+        return true;
+      }
+      if (currentUser.pegawaiId && currentUser.pegawaiId === pj.atasanId) return true;
+      return false;
+    }
+
+    // Stage 3: TTE Pejabat Final
+    if (pj.status === 'Menunggu Pejabat') {
+      if (currentUser.role === 'Verifikator') return true;
+      if (currentUser.role === 'Pejabat') {
+        if (currentUser.pegawaiId) {
+          return currentUser.pegawaiId === pj.pejabatId;
+        }
+        return true;
+      }
+      if (currentUser.pegawaiId && currentUser.pegawaiId === pj.pejabatId) return true;
+      return false;
+    }
+
     return false;
+  };
+
+  const isVerifikatorForThis = (pj: PengajuanCuti) => {
+    return canApprove(pj);
   };
 
   const handleExportTemplate = () => {
@@ -531,13 +691,19 @@ export default function PengajuanCutiView({
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h3 className="text-base font-bold text-gray-800">Transaksi Pengajuan Cuti ASN</h3>
-          <p className="text-xs text-gray-500">Kelola pendaftaran berkas permohonan cuti baru, verifikasi persetujuan pimpinan, dan pelacakan status workflow.</p>
+          <h3 className="text-base font-bold text-gray-800">
+            {isApprovalPage ? 'Lembar Persetujuan & TTE Cuti ASN' : 'Transaksi Pengajuan Cuti ASN'}
+          </h3>
+          <p className="text-xs text-gray-500">
+            {isApprovalPage 
+              ? 'Verifikasi lembar kerja, persetujuan atasan langsung, dan Penandatanganan Elektronik (TTE) pejabat berwenang.' 
+              : 'Kelola pendaftaran berkas permohonan cuti baru, verifikasi persetujuan pimpinan, dan pelacakan status workflow.'}
+          </p>
         </div>
         
         <div className="flex flex-wrap items-center gap-2">
           {/* Hanya admin yang bisa mengunduh template atau mengimpor data pengajuan */}
-          {currentUser?.role === 'Admin' && (
+          {currentUser?.role === 'Admin' && !isApprovalPage && (
             <>
               <button
                 id="btn-export-template-pengajuan"
@@ -556,8 +722,8 @@ export default function PengajuanCutiView({
             </>
           )}
 
-          {/* Hanya operator/admin atau PNS sendiri yang bisa tambah cuti baru */}
-          {(currentUser?.role === 'Operator' || currentUser?.role === 'Admin') && (
+          {/* Hanya operator/admin yang bisa tambah cuti baru (tidak pada halaman persetujuan) */}
+          {(currentUser?.role === 'Operator' || currentUser?.role === 'Admin') && !isApprovalPage && (
             <button
               id="btn-pengajuan-baru"
               onClick={openAddModal}
@@ -570,22 +736,116 @@ export default function PengajuanCutiView({
         </div>
       </div>
 
-      {/* Filter / Search */}
-      <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex flex-col md:flex-row items-center gap-4">
-        <div className="relative w-full md:w-80 shrink-0">
-          <Search className="w-4 h-4 text-gray-400 absolute left-3 top-2.5" />
-          <input
-            type="text"
-            placeholder="Cari nama pegawai, jenis cuti, nomor surat..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-gray-50 border border-gray-200 rounded-lg pl-9 pr-4 py-1.5 text-xs text-gray-700 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
-          />
+      {/* Filter / Search & Stage Filter Tabs */}
+      <div className="space-y-3">
+        <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex flex-col md:flex-row items-center gap-4 justify-between">
+          <div className="relative w-full md:w-80 shrink-0">
+            <Search className="w-4 h-4 text-gray-400 absolute left-3 top-2.5" />
+            <input
+              type="text"
+              placeholder="Cari nama pegawai, jenis cuti, nomor surat..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full bg-gray-50 border border-gray-200 rounded-lg pl-9 pr-4 py-1.5 text-xs text-gray-700 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
+            />
+          </div>
+          <div className="flex items-center gap-4 text-xs font-medium text-gray-500">
+            <span>Pengajuan Terdaftar: <strong className="text-gray-800">{filteredPengajuanBase.length}</strong></span>
+            <span className="text-gray-300">|</span>
+            <span>Perlu Tindakan: <strong className="text-amber-600">{filteredPengajuanBase.filter(pj => pj.status === 'Menunggu' || pj.status === 'Menunggu Atasan' || pj.status === 'Menunggu Pejabat').length}</strong></span>
+          </div>
         </div>
-        <div className="flex items-center gap-4 text-xs font-medium text-gray-500">
-          <span>Pengajuan Terdaftar: <strong className="text-gray-800">{filteredPengajuanBase.length}</strong></span>
-          <span className="text-gray-300">|</span>
-          <span>Menunggu Verifikasi: <strong className="text-amber-600">{filteredPengajuanBase.filter(pj => pj.status === 'Menunggu' || pj.status === 'Dalam Perbaikan' || pj.status === 'Sudah Diperbaiki').length}</strong></span>
+
+        {/* Tab Filter Alur Approval (Disesuaikan dengan Role Akun) */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 custom-scrollbar">
+          <button
+            onClick={() => setActiveStageTab('semua')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+              activeStageTab === 'semua'
+                ? 'bg-slate-900 text-white shadow-sm'
+                : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+            }`}
+          >
+            Semua Data ({userPengajuan.length})
+          </button>
+
+          {/* Tab 1: Verifikator (Muncul untuk Admin, Verifikator, Operator, Pegawai) */}
+          {(currentUser?.role === 'Admin' || currentUser?.role === 'Verifikator' || currentUser?.role === 'Operator' || currentUser?.role === 'Pegawai') && (
+            <button
+              onClick={() => setActiveStageTab('verifikator')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${
+                activeStageTab === 'verifikator'
+                  ? 'bg-amber-600 text-white shadow-sm'
+                  : 'bg-white text-amber-700 border border-amber-200 hover:bg-amber-50'
+              }`}
+            >
+              <span>1. Verifikator</span>
+              <span className="px-1.5 py-0.2 bg-amber-100 text-amber-800 rounded-full text-[10px] font-mono">
+                {userPengajuan.filter(p => p.status === 'Menunggu' || p.status === 'Sudah Diperbaiki' || p.status === 'Dalam Perbaikan').length}
+              </span>
+            </button>
+          )}
+
+          {/* Tab 2: TTE Atasan Langsung (Muncul untuk Admin, Verifikator, Operator, Atasan) */}
+          {(currentUser?.role === 'Admin' || currentUser?.role === 'Verifikator' || currentUser?.role === 'Operator' || currentUser?.role === 'Atasan') && (
+            <button
+              onClick={() => setActiveStageTab('atasan')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${
+                activeStageTab === 'atasan'
+                  ? 'bg-blue-600 text-white shadow-sm'
+                  : 'bg-white text-blue-700 border border-blue-200 hover:bg-blue-50'
+              }`}
+            >
+              <span>2. TTE Atasan Langsung</span>
+              <span className="px-1.5 py-0.2 bg-blue-100 text-blue-800 rounded-full text-[10px] font-mono">
+                {userPengajuan.filter(p => p.status === 'Menunggu Atasan').length}
+              </span>
+            </button>
+          )}
+
+          {/* Tab 3: TTE Pejabat Final (Muncul untuk Admin, Verifikator, Operator, Pejabat) */}
+          {(currentUser?.role === 'Admin' || currentUser?.role === 'Verifikator' || currentUser?.role === 'Operator' || currentUser?.role === 'Pejabat') && (
+            <button
+              onClick={() => setActiveStageTab('pejabat')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${
+                activeStageTab === 'pejabat'
+                  ? 'bg-purple-600 text-white shadow-sm'
+                  : 'bg-white text-purple-700 border border-purple-200 hover:bg-purple-50'
+              }`}
+            >
+              <span>3. TTE Pejabat Final</span>
+              <span className="px-1.5 py-0.2 bg-purple-100 text-purple-800 rounded-full text-[10px] font-mono">
+                {userPengajuan.filter(p => p.status === 'Menunggu Pejabat').length}
+              </span>
+            </button>
+          )}
+
+          <button
+            onClick={() => setActiveStageTab('disetujui')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${
+              activeStageTab === 'disetujui'
+                ? 'bg-teal-600 text-white shadow-sm'
+                : 'bg-white text-teal-700 border border-teal-200 hover:bg-teal-50'
+            }`}
+          >
+            <span>Disetujui (Siap Cetak)</span>
+            <span className="px-1.5 py-0.2 bg-teal-100 text-teal-800 rounded-full text-[10px] font-mono">
+              {userPengajuan.filter(p => p.status === 'Disetujui').length}
+            </span>
+          </button>
+          <button
+            onClick={() => setActiveStageTab('ditolak')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${
+              activeStageTab === 'ditolak'
+                ? 'bg-rose-600 text-white shadow-sm'
+                : 'bg-white text-rose-700 border border-rose-200 hover:bg-rose-50'
+            }`}
+          >
+            <span>Ditolak / Revisi</span>
+            <span className="px-1.5 py-0.2 bg-rose-100 text-rose-800 rounded-full text-[10px] font-mono">
+              {userPengajuan.filter(p => p.status === 'Ditolak' || p.status === 'Dalam Perbaikan').length}
+            </span>
+          </button>
         </div>
       </div>
 
@@ -599,7 +859,7 @@ export default function PengajuanCutiView({
                 <th className="p-4">Nama Pemohon / Pegawai</th>
                 <th className="p-4">Kategori Cuti</th>
                 <th className="p-4">Rentang & Durasi</th>
-                <th className="p-4 text-center">Status</th>
+                <th className="p-4 text-center">Status & Metode</th>
                 <th className="p-4 text-center">Aksi</th>
               </tr>
             </thead>
@@ -607,17 +867,28 @@ export default function PengajuanCutiView({
               {filteredPengajuanBase.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="p-8 text-center text-gray-400">
-                    Tidak ada transaksi pengajuan cuti yang ditemukan.
+                    Tidak ada transaksi pengajuan cuti yang ditemukan pada kategori ini.
                   </td>
                 </tr>
               ) : (
                 filteredPengajuan.map((pj) => {
                   const statusStyles: Record<string, string> = {
                     'Menunggu': 'bg-amber-50 text-amber-700 border-amber-200',
+                    'Menunggu Atasan': 'bg-blue-50 text-blue-700 border-blue-200',
+                    'Menunggu Pejabat': 'bg-purple-50 text-purple-700 border-purple-200',
                     'Disetujui': 'bg-teal-50 text-teal-700 border-teal-200',
-                    'Ditolak': 'bg-red-50 text-red-700 border-red-200',
+                    'Ditolak': 'bg-rose-50 text-rose-700 border-rose-200',
                     'Dalam Perbaikan': 'bg-orange-50 text-orange-700 border-orange-200',
-                    'Sudah Diperbaiki': 'bg-blue-50 text-blue-700 border-blue-200'
+                    'Sudah Diperbaiki': 'bg-indigo-50 text-indigo-700 border-indigo-200'
+                  };
+                  const statusLabels: Record<string, string> = {
+                    'Menunggu': '1. Verifikasi',
+                    'Menunggu Atasan': '2. TTE Atasan Langsung',
+                    'Menunggu Pejabat': '3. TTE Pejabat Final',
+                    'Disetujui': 'Disetujui (Siap Cetak)',
+                    'Ditolak': 'Ditolak',
+                    'Dalam Perbaikan': 'Dalam Perbaikan',
+                    'Sudah Diperbaiki': '1. Diperbaiki (Verifikator)'
                   };
                   return (
                     <tr key={pj.id} className="hover:bg-gray-50/50 transition-all">
@@ -630,14 +901,19 @@ export default function PengajuanCutiView({
                       </td>
                       <td className="p-4 font-semibold text-gray-700">{getJenisCutiNama(pj.jenisCutiId)}</td>
                       <td className="p-4">
-                        <div className="font-semibold text-blue-700 font-mono">{pj.jumlahHari} Hari Kerja</div>
+                        <div className="font-semibold text-blue-700 font-mono">
+                          {pj.jumlahHari} {isHariKalender(pj.jenisCutiId) ? 'Hari Kalender' : 'Hari Kerja'}
+                        </div>
                         <div className="text-[10px] text-gray-400 font-mono">{pj.tanggalMulai} s.d {pj.tanggalSelesai}</div>
                       </td>
                       <td className="p-4 text-center">
                         <div className="inline-block">
-                          <span className={`px-2.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border ${statusStyles[pj.status]}`}>
-                            {pj.status}
+                          <span className={`px-2.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border ${statusStyles[pj.status] || 'bg-gray-50 text-gray-700 border-gray-200'}`}>
+                            {statusLabels[pj.status] || pj.status}
                           </span>
+                        </div>
+                        <div className="text-[9px] font-medium text-slate-500 mt-1">
+                          {pj.ttdDigitalAtasan && pj.ttdDigitalPejabat ? '✨ TTE Full QR' : '✍️ TTD Manual/Basah'}
                         </div>
                         {pj.catatanPerbaikan && pj.status === 'Dalam Perbaikan' && (
                           <div className="text-[9px] text-red-500 mt-1 max-w-36 leading-tight mx-auto font-medium">
@@ -647,25 +923,38 @@ export default function PengajuanCutiView({
                       </td>
                       <td className="p-4">
                         <div className="flex items-center justify-center gap-1.5">
-                          {/* Tombol Tindak Lanjut Approval */}
-                          {(((pj.status === 'Menunggu' || pj.status === 'Dalam Perbaikan' || pj.status === 'Sudah Diperbaiki') && isVerifikatorForThis(pj)) ||
-                            (currentUser?.role === 'Admin' && (pj.status === 'Menunggu' || pj.status === 'Dalam Perbaikan' || pj.status === 'Sudah Diperbaiki' || pj.status === 'Disetujui'))) && (
+                          {/* Tombol Detail / Lihat Pengajuan (Hanya dimunculkan untuk non-Admin) */}
+                          {currentUser?.role !== 'Admin' && (
+                            <button
+                              id={`btn-detail-pj-${pj.id}`}
+                              onClick={() => openDetailModal(pj)}
+                              className="p-1.5 bg-gray-50 hover:bg-slate-100 text-slate-700 border border-slate-200 rounded transition-all cursor-pointer"
+                              title="Lihat Detail & Dokumen"
+                            >
+                              <Eye className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+
+                          {/* Tombol Tindak Lanjut Approval / Proses */}
+                          {(currentUser?.role === 'Admin' ||
+                            ((pj.status === 'Menunggu' || pj.status === 'Sudah Diperbaiki' || pj.status === 'Dalam Perbaikan' || pj.status === 'Menunggu Atasan' || pj.status === 'Menunggu Pejabat') &&
+                             canApprove(pj))) && (
                             <button
                               id={`btn-verif-pj-${pj.id}`}
                               onClick={() => openApprovalModal(pj)}
-                              className="px-2 py-1 bg-amber-500 hover:bg-amber-600 text-slate-950 rounded text-[10px] font-bold transition-all flex items-center gap-1 shadow-sm cursor-pointer"
-                              title="Verifikasi Pengajuan"
+                              className="px-2.5 py-1 bg-amber-500 hover:bg-amber-600 text-slate-950 rounded text-[10px] font-black transition-all flex items-center gap-1 shadow-sm cursor-pointer"
+                              title="Proses Approval / Verifikasi"
                             >
                               <CheckCircle2 className="w-3.5 h-3.5" />
-                              <span>Verifikasi</span>
+                              <span>Proses</span>
                             </button>
                           )}
                           
-                          {/* Tombol Hapus & Edit Pengajuan */}
+                          {/* Tombol Edit & Hapus Pengajuan */}
                           {(() => {
-                            let canManage = false;
-                            if (currentUser?.role === 'Admin') canManage = true;
-                            if (currentUser?.role === 'Operator') {
+                            const isAdmin = currentUser?.role === 'Admin';
+                            let canManage = isAdmin;
+                            if (!isAdmin && currentUser?.role === 'Operator') {
                               if (currentUser.pegawaiId) {
                                 const currentUserPegawai = pegawai.find(p => p.id === currentUser.pegawaiId);
                                 const pjPegawai = pegawai.find(p => p.id === pj.pegawaiId);
@@ -673,7 +962,6 @@ export default function PengajuanCutiView({
                                   canManage = true;
                                 }
                               } else {
-                                // Default allow if operator has no linked pegawaiId to avoid blocking
                                 canManage = true;
                               }
                             }
@@ -682,9 +970,10 @@ export default function PengajuanCutiView({
 
                             return (
                               <>
-                                {/* Edit button: shown if Menunggu or Dalam Perbaikan */}
-                                {(pj.status === 'Menunggu' || pj.status === 'Dalam Perbaikan' || pj.status === 'Sudah Diperbaiki') && (
+                                {/* Edit button: Admin always, or Operator when status allows */}
+                                {(isAdmin || (pj.status === 'Menunggu' || pj.status === 'Dalam Perbaikan' || pj.status === 'Sudah Diperbaiki')) && (
                                   <button
+                                    id={`btn-edit-pj-${pj.id}`}
                                     onClick={() => openEditModal(pj)}
                                     className="p-1.5 bg-gray-50 hover:bg-blue-50 text-gray-600 hover:text-blue-700 border border-gray-200 rounded transition-all cursor-pointer"
                                     title="Edit Pengajuan"
@@ -693,8 +982,8 @@ export default function PengajuanCutiView({
                                   </button>
                                 )}
 
-                                {/* Delete button: shown if Menunggu, Ditolak, or Dalam Perbaikan */}
-                                {(pj.status === 'Menunggu' || pj.status === 'Ditolak' || pj.status === 'Dalam Perbaikan' || pj.status === 'Sudah Diperbaiki') && (
+                                {/* Delete button: Admin always, or Operator when status allows */}
+                                {(isAdmin || (pj.status === 'Menunggu' || pj.status === 'Ditolak' || pj.status === 'Dalam Perbaikan' || pj.status === 'Sudah Diperbaiki')) && (
                                   <button
                                     id={`btn-delete-pj-${pj.id}`}
                                     onClick={() => openDeleteConfirm(pj)}
@@ -1038,36 +1327,73 @@ export default function PengajuanCutiView({
                 </div>
               </div>
 
-              {/* Tanda Tangan Digital Options */}
+              {/* Ketentuan Metode Penandatanganan */}
               <div className="col-span-2 space-y-2 pt-2 border-t border-gray-100">
-                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider font-mono">Pilihan Tanda Tangan Digital pada Dokumen Cuti</label>
-                <div className="flex flex-col gap-2 md:flex-row md:gap-6">
-                  <label className="flex items-center gap-2 cursor-pointer">
+                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider font-mono">Metode Penandatanganan & Legalisasi Dokumen Cuti</label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <label 
+                    onClick={() => {
+                      setFormMetodeTtd('TTE');
+                      setFormTtdDigitalPemohon(true);
+                      setFormTtdDigitalAtasan(true);
+                      setFormTtdDigitalPejabat(true);
+                    }}
+                    className={`p-3 rounded-xl border-2 flex items-start gap-3 cursor-pointer transition-all ${
+                      formMetodeTtd === 'TTE' 
+                        ? 'bg-blue-50/70 border-blue-600 text-blue-950 shadow-xs' 
+                        : 'bg-slate-50 border-slate-200 hover:border-slate-300 text-slate-700'
+                    }`}
+                  >
                     <input 
-                      type="checkbox" 
-                      checked={formTtdDigitalPemohon} 
-                      onChange={(e) => setFormTtdDigitalPemohon(e.target.checked)} 
-                      className="rounded text-blue-600 focus:ring-blue-500 w-4 h-4" 
+                      type="radio" 
+                      name="metodePenandatanganan"
+                      checked={formMetodeTtd === 'TTE'} 
+                      onChange={() => {
+                        setFormMetodeTtd('TTE');
+                        setFormTtdDigitalPemohon(true);
+                        setFormTtdDigitalAtasan(true);
+                        setFormTtdDigitalPejabat(true);
+                      }}
+                      className="mt-0.5 text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer" 
                     />
-                    <span className="text-xs text-gray-700">TTD Pemohon Secara Digital</span>
+                    <div>
+                      <div className="text-xs font-bold flex items-center gap-1.5">
+                        <span>Full TTE QR Code</span>
+                        <span className="px-1.5 py-0.5 bg-blue-600 text-white text-[9px] font-mono rounded font-semibold">Rekomendasi</span>
+                      </div>
+                      <p className="text-[11px] text-gray-500 mt-0.5">Menerbitkan QR Code TTE resmi secara otomatis pada lembar cetak untuk Pemohon, Atasan, dan Pejabat.</p>
+                    </div>
                   </label>
-                  <label className="flex items-center gap-2 cursor-pointer">
+
+                  <label 
+                    onClick={() => {
+                      setFormMetodeTtd('MANUAL');
+                      setFormTtdDigitalPemohon(false);
+                      setFormTtdDigitalAtasan(false);
+                      setFormTtdDigitalPejabat(false);
+                    }}
+                    className={`p-3 rounded-xl border-2 flex items-start gap-3 cursor-pointer transition-all ${
+                      formMetodeTtd === 'MANUAL' 
+                        ? 'bg-amber-50/70 border-amber-600 text-amber-950 shadow-xs' 
+                        : 'bg-slate-50 border-slate-200 hover:border-slate-300 text-slate-700'
+                    }`}
+                  >
                     <input 
-                      type="checkbox" 
-                      checked={formTtdDigitalAtasan} 
-                      onChange={(e) => setFormTtdDigitalAtasan(e.target.checked)} 
-                      className="rounded text-blue-600 focus:ring-blue-500 w-4 h-4" 
+                      type="radio" 
+                      name="metodePenandatanganan"
+                      checked={formMetodeTtd === 'MANUAL'} 
+                      onChange={() => {
+                        setFormMetodeTtd('MANUAL');
+                        setFormTtdDigitalPemohon(false);
+                        setFormTtdDigitalAtasan(false);
+                        setFormTtdDigitalPejabat(false);
+                      }}
+                      className="mt-0.5 text-amber-600 focus:ring-amber-500 w-4 h-4 cursor-pointer" 
                     />
-                    <span className="text-xs text-gray-700">TTD Atasan Langsung Secara Digital</span>
-                  </label>
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input 
-                      type="checkbox" 
-                      checked={formTtdDigitalPejabat} 
-                      onChange={(e) => setFormTtdDigitalPejabat(e.target.checked)} 
-                      className="rounded text-blue-600 focus:ring-blue-500 w-4 h-4" 
-                    />
-                    <span className="text-xs text-gray-700">TTD Pejabat Berwenang Secara Digital</span>
+                    <div>
+                      <div className="text-xs font-bold">TTD Manual / Basah</div>
+                      <p className="text-[11px] text-gray-500 mt-0.5">Mencetak formulir tanpa QR Code untuk ditandatangani secara fisik / basah oleh pejabat terkait.</p>
+                    </div>
                   </label>
                 </div>
               </div>
@@ -1105,8 +1431,12 @@ export default function PengajuanCutiView({
                   <CheckCircle2 className="w-5 h-5" />
                 </div>
                 <div>
-                  <h4 className="text-base font-black text-gray-900">Verifikasi Berkas Pengajuan Cuti ASN</h4>
-                  <p className="text-xs text-gray-500 font-medium">Lakukan penelaahan dokumen bukti dukung, alasan, serta sisa kuota sebelum memberi keputusan.</p>
+                  <h4 className="text-base font-black text-gray-900">
+                    {isViewOnlyModal ? 'Rangkuman & Dokumen Pengajuan Cuti ASN' : 'Verifikasi Berkas Pengajuan Cuti ASN'}
+                  </h4>
+                  <p className="text-xs text-gray-500 font-medium">
+                    {isViewOnlyModal ? 'Rangkuman lengkap permohonan cuti, alasan, serta berkas bukti dukung.' : 'Lakukan penelaahan dokumen bukti dukung, alasan, serta sisa kuota sebelum memberi keputusan.'}
+                  </p>
                 </div>
               </div>
               <button 
@@ -1124,6 +1454,45 @@ export default function PengajuanCutiView({
               {/* Left Pane - Detail Pengajuan (7 cols) */}
               <div className="lg:col-span-7 p-6 space-y-5 overflow-y-auto custom-scrollbar">
                 
+                {/* Status Timeline Header dalam Modal */}
+                <div className="p-3.5 bg-slate-100/80 border border-slate-200/80 rounded-xl space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider font-mono">Posisi Tahap Approval:</span>
+                    <span className="text-[10px] font-bold text-slate-600 font-mono">
+                      Metode: <strong className={selectedPj.ttdDigitalAtasan && selectedPj.ttdDigitalPejabat ? 'text-blue-700' : 'text-slate-800'}>
+                        {selectedPj.ttdDigitalAtasan && selectedPj.ttdDigitalPejabat ? 'FULL TTE QR CODE' : 'TTD MANUAL / BASAH'}
+                      </strong>
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 text-center text-[10px] font-bold">
+                    <div className={`p-2 rounded-lg border ${
+                      selectedPj.status === 'Menunggu' || selectedPj.status === 'Sudah Diperbaiki' || selectedPj.status === 'Dalam Perbaikan'
+                        ? 'bg-amber-50 border-amber-300 text-amber-900 shadow-xs ring-1 ring-amber-300 font-extrabold'
+                        : 'bg-white border-slate-200 text-slate-400 opacity-60'
+                    }`}>
+                      1. Verifikator
+                    </div>
+                    <div className={`p-2 rounded-lg border ${
+                      selectedPj.status === 'Menunggu Atasan'
+                        ? 'bg-blue-50 border-blue-300 text-blue-900 shadow-xs ring-1 ring-blue-300 font-extrabold'
+                        : selectedPj.status === 'Menunggu Pejabat' || selectedPj.status === 'Disetujui'
+                        ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                        : 'bg-white border-slate-200 text-slate-400 opacity-60'
+                    }`}>
+                      2. TTE Atasan Langsung
+                    </div>
+                    <div className={`p-2 rounded-lg border ${
+                      selectedPj.status === 'Menunggu Pejabat'
+                        ? 'bg-purple-50 border-purple-300 text-purple-900 shadow-xs ring-1 ring-purple-300 font-extrabold'
+                        : selectedPj.status === 'Disetujui'
+                        ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                        : 'bg-white border-slate-200 text-slate-400 opacity-60'
+                    }`}>
+                      3. TTE Pejabat Final
+                    </div>
+                  </div>
+                </div>
+
                 {/* Bagian 1: Informasi Pemohon */}
                 <div className="space-y-3">
                   <h5 className="text-[10px] font-black text-slate-400 uppercase tracking-widest font-mono flex items-center gap-1">
@@ -1159,7 +1528,9 @@ export default function PengajuanCutiView({
                     </div>
                     <div className="p-3 bg-slate-50 border border-slate-100 rounded-xl">
                       <span className="text-[9px] font-bold text-gray-400 uppercase font-mono block">Durasi Pengajuan</span>
-                      <span className="text-xs font-bold text-blue-700 font-mono">{selectedPj.jumlahHari} Hari Kerja</span>
+                      <span className="text-xs font-bold text-blue-700 font-mono">
+                        {selectedPj.jumlahHari} {isHariKalender(selectedPj.jenisCutiId) ? 'Hari Kalender' : 'Hari Kerja'}
+                      </span>
                     </div>
                     <div className="p-3 bg-slate-50 border border-slate-100 rounded-xl">
                       <span className="text-[9px] font-bold text-gray-400 uppercase font-mono block">Rentang Tanggal</span>
@@ -1224,45 +1595,69 @@ export default function PengajuanCutiView({
                   </div>
                 )}
 
-                {/* Form Input Catatan/Revisi */}
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider font-mono block">Tulis Catatan Verifikator / Alasan Perbaikan / Alasan Penolakan</label>
-                  <textarea
-                    rows={3}
-                    value={appCatatan}
-                    onChange={(e) => setAppCatatan(e.target.value)}
-                    placeholder="Wajib diisi jika Anda menolak (Ditolak) atau meminta perbaikan dokumen (Dalam Perbaikan). Opsional jika disetujui..."
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-xs text-gray-700 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder:text-gray-400 font-medium"
-                  />
-                </div>
+                {/* Form Input Catatan/Revisi & Decision Buttons (Hanya jika BUKAN View-Only) */}
+                {!isViewOnlyModal ? (
+                  <>
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider font-mono block">Tulis Catatan Verifikator / Alasan Perbaikan / Alasan Penolakan</label>
+                      <textarea
+                        rows={3}
+                        value={appCatatan}
+                        onChange={(e) => setAppCatatan(e.target.value)}
+                        placeholder="Wajib diisi jika Anda menolak (Ditolak) atau meminta perbaikan dokumen (Dalam Perbaikan). Opsional jika disetujui..."
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-xs text-gray-700 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder:text-gray-400 font-medium"
+                      />
+                    </div>
 
-                {/* Decision Buttons inside detail panel */}
-                <div className="grid grid-cols-3 gap-2 pt-4 border-t border-gray-100">
-                  <button
-                    id="btn-verif-tolak"
-                    onClick={() => handleApprovalAction('Ditolak')}
-                    className="px-3 py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
-                  >
-                    <Ban className="w-4 h-4" />
-                    <span>Tolak</span>
-                  </button>
-                  <button
-                    id="btn-verif-revisi"
-                    onClick={() => handleApprovalAction('Dalam Perbaikan')}
-                    className="px-3 py-2.5 bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
-                  >
-                    <RefreshCw className="w-4 h-4 animate-spin-hover" />
-                    <span>Revisi</span>
-                  </button>
-                  <button
-                    id="btn-verif-setuju"
-                    onClick={() => handleApprovalAction('Disetujui')}
-                    className="px-3 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-md hover:shadow-lg"
-                  >
-                    <Check className="w-4 h-4" />
-                    <span>Setujui</span>
-                  </button>
-                </div>
+                    {/* Decision Buttons inside detail panel */}
+                    <div className="grid grid-cols-3 gap-2 pt-4 border-t border-gray-100">
+                      <button
+                        id="btn-verif-tolak"
+                        onClick={() => handleApprovalAction('Ditolak')}
+                        className="px-3 py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
+                      >
+                        <Ban className="w-4 h-4" />
+                        <span>Tolak</span>
+                      </button>
+                      <button
+                        id="btn-verif-revisi"
+                        onClick={() => handleApprovalAction('Dalam Perbaikan')}
+                        className="px-3 py-2.5 bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
+                      >
+                        <RefreshCw className="w-4 h-4 animate-spin-hover" />
+                        <span>Revisi</span>
+                      </button>
+                      <button
+                        id="btn-verif-setuju"
+                        onClick={() => handleApprovalAction('Disetujui')}
+                        className="px-3 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-md hover:shadow-lg"
+                      >
+                        <Check className="w-4 h-4" />
+                        <span>Setujui</span>
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <div className="space-y-4 pt-2">
+                    {selectedPj.catatanPerbaikan && (
+                      <div className="p-3.5 bg-rose-50/90 border border-rose-200 rounded-xl space-y-1">
+                        <span className="text-[10px] font-bold text-rose-600 uppercase font-mono block">
+                          Catatan Verifikator / Alasan Perbaikan/Penolakan:
+                        </span>
+                        <p className="text-xs font-semibold text-rose-900 leading-relaxed">&ldquo;{selectedPj.catatanPerbaikan}&rdquo;</p>
+                      </div>
+                    )}
+                    <div className="pt-2 border-t border-gray-100 flex justify-end">
+                      <button
+                        id="btn-close-detail-modal"
+                        onClick={() => setShowApprovalModal(false)}
+                        className="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-bold transition-all cursor-pointer shadow-xs"
+                      >
+                        Tutup Pratinjau
+                      </button>
+                    </div>
+                  </div>
+                )}
 
               </div>
 

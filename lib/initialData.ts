@@ -221,5 +221,21 @@ export const initialUsers: PengaturanUser[] = [
     role: 'Verifikator',
     password: 'verifikator',
     pegawaiId: 'peg-2'
+  },
+  {
+    id: 'u-4',
+    username: 'atasan',
+    nama: 'H. Mohamad Ali, S.Sos. (Kabag Umum / Atasan Langsung)',
+    role: 'Atasan',
+    password: 'atasan',
+    pegawaiId: 'peg-2'
+  },
+  {
+    id: 'u-5',
+    username: 'pejabat',
+    nama: 'Drs. Akhmad Sugiharto, S.T., M.T. (Sekda / Pejabat Final)',
+    role: 'Pejabat',
+    password: 'pejabat',
+    pegawaiId: 'peg-1'
   }
 ];

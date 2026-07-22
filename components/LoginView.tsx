@@ -159,7 +159,7 @@ export default function LoginView({ users, instansi, onLogin }: LoginViewProps) 
 
             <button
               type="submit"
-              className="group w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 px-4 rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 mt-4"
+              className="group w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 px-4 rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 mt-4 cursor-pointer"
             >
               <span>Masuk Sekarang</span>
               <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />

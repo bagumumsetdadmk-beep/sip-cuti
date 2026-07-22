@@ -13,7 +13,8 @@ import {
   Printer, 
   Settings, 
   UserCog, 
-  LogOut 
+  LogOut,
+  CheckSquare
 } from 'lucide-react';
 import { useAppData } from '../hooks/useAppData';
 
@@ -24,28 +25,77 @@ interface SidebarProps {
     nama: string;
     role: string;
     username: string;
+    pegawaiId?: string;
   } | null;
 }
 
 export default function Sidebar({ currentMenu, setCurrentMenu, currentUser }: SidebarProps) {
   const { instansi, pengajuan } = useAppData();
   
-  const pendingCount = React.useMemo(() => {
-    return pengajuan.filter(p => p.status === 'Menunggu' || p.status === 'Dalam Perbaikan' || p.status === 'Sudah Diperbaiki').length;
-  }, [pengajuan]);
-
   const role = currentUser?.role || 'Admin';
 
+  // Hitung badge pengajuan umum (Operator, Admin, Pegawai)
+  const generalPendingCount = React.useMemo(() => {
+    if (!currentUser) return 0;
+    const userRole = currentUser.role || 'Admin';
+
+    if (userRole === 'Pegawai') {
+      if (!currentUser.pegawaiId) return 0;
+      return pengajuan.filter(p => p.pegawaiId === currentUser.pegawaiId && p.status === 'Dalam Perbaikan').length;
+    }
+
+    return pengajuan.filter(p => p.status === 'Menunggu' || p.status === 'Dalam Perbaikan' || p.status === 'Sudah Diperbaiki').length;
+  }, [pengajuan, currentUser]);
+
+  // Hitung badge khusus persetujuan TTE untuk Verifikator, Atasan, Pejabat, dan Admin
+  const approvalPendingCount = React.useMemo(() => {
+    if (!currentUser) return 0;
+    const userRole = currentUser.role || 'Admin';
+
+    if (userRole === 'Verifikator') {
+      return pengajuan.filter(p => p.status === 'Menunggu' || p.status === 'Sudah Diperbaiki' || p.status === 'Dalam Perbaikan').length;
+    }
+
+    if (userRole === 'Atasan') {
+      return pengajuan.filter(p => {
+        if (p.status !== 'Menunggu Atasan') return false;
+        if (currentUser.pegawaiId) {
+          return p.atasanId === currentUser.pegawaiId;
+        }
+        return true;
+      }).length;
+    }
+
+    if (userRole === 'Pejabat') {
+      return pengajuan.filter(p => {
+        if (p.status !== 'Menunggu Pejabat') return false;
+        if (currentUser.pegawaiId) {
+          return p.pejabatId === currentUser.pegawaiId;
+        }
+        return true;
+      }).length;
+    }
+
+    if (userRole === 'Admin') {
+      return pengajuan.filter(p => p.status === 'Menunggu' || p.status === 'Sudah Diperbaiki' || p.status === 'Menunggu Atasan' || p.status === 'Menunggu Pejabat').length;
+    }
+
+    return 0;
+  }, [pengajuan, currentUser]);
+
+  const allRoles = ['Admin', 'Verifikator', 'Operator', 'Atasan', 'Pejabat', 'Pegawai'];
+
   const menuItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, section: 'UTAMA', roles: ['Admin', 'Verifikator', 'Operator'] },
-    { id: 'pegawai', label: 'Data Pegawai', icon: Users, section: 'MASTER DATA', roles: ['Admin', 'Verifikator', 'Operator'] },
+    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, section: 'UTAMA', roles: allRoles },
+    { id: 'pegawai', label: 'Data Pegawai', icon: Users, section: 'MASTER DATA', roles: allRoles },
     { id: 'harilibur', label: 'Hari Libur', icon: CalendarDays, section: 'MASTER DATA', roles: ['Admin'] },
     { id: 'atasanpejabat', label: 'Atasan & Pejabat', icon: UserCheck, section: 'MASTER DATA', roles: ['Admin'] },
     { id: 'jeniscuti', label: 'Jenis Cuti', icon: FileText, section: 'MASTER DATA', roles: ['Admin'] },
-    { id: 'sisacuti', label: 'Sisa Cuti Tahunan', icon: History, section: 'MASTER DATA', roles: ['Admin', 'Verifikator', 'Operator'] },
-    { id: 'rekapcuti', label: 'Rekap Cuti Pegawai', icon: FileText, section: 'MASTER DATA', roles: ['Admin', 'Verifikator', 'Operator'] },
-    { id: 'pengajuan', label: 'Pengajuan Cuti', icon: FileEdit, section: 'TRANSAKSI', badge: pendingCount, roles: ['Admin', 'Verifikator', 'Operator'] },
-    { id: 'cetak', label: 'Cetak Pengajuan Cuti', icon: Printer, section: 'TRANSAKSI', roles: ['Admin', 'Operator'] },
+    { id: 'sisacuti', label: 'Sisa Cuti Tahunan', icon: History, section: 'MASTER DATA', roles: allRoles },
+    { id: 'rekapcuti', label: 'Rekap Cuti Pegawai', icon: FileText, section: 'MASTER DATA', roles: allRoles },
+    { id: 'pengajuan', label: 'Pengajuan Cuti', icon: FileEdit, section: 'TRANSAKSI', badge: generalPendingCount > 0 ? generalPendingCount : undefined, roles: ['Admin', 'Operator', 'Pegawai'] },
+    { id: 'persetujuan', label: 'Persetujuan Cuti', icon: CheckSquare, section: 'TRANSAKSI', badge: approvalPendingCount > 0 ? approvalPendingCount : undefined, roles: ['Admin', 'Verifikator', 'Atasan', 'Pejabat'] },
+    { id: 'cetak', label: 'Cetak Pengajuan Cuti', icon: Printer, section: 'TRANSAKSI', roles: ['Admin', 'Verifikator', 'Operator', 'Pegawai'] },
     { id: 'pengaturan', label: 'Pengaturan Instansi', icon: Settings, section: 'SISTEM', roles: ['Admin'] },
     { id: 'user', label: 'Pengaturan User', icon: UserCog, section: 'SISTEM', roles: ['Admin'] },
   ];

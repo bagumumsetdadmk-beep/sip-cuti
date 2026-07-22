@@ -168,6 +168,26 @@ export default function Home() {
             hitungHariKerja={hitungHariKerja}
             hitungTanggalSelesai={hitungTanggalSelesai}
             hitungTotalCutiTahunan={hitungTotalCutiTahunan}
+            isApprovalPage={false}
+          />
+        );
+      case 'persetujuan':
+        return (
+          <PengajuanCutiView 
+            pengajuan={pengajuan}
+            pegawai={pegawai}
+            jenisCuti={jenisCuti}
+            atasanPejabat={atasanPejabat}
+            sisaCuti={sisaCuti}
+            currentUser={currentUser}
+            addPengajuan={addPengajuan}
+            updatePengajuanStatus={updatePengajuanStatus}
+            updatePengajuan={updatePengajuan}
+            deletePengajuan={deletePengajuan}
+            hitungHariKerja={hitungHariKerja}
+            hitungTanggalSelesai={hitungTanggalSelesai}
+            hitungTotalCutiTahunan={hitungTotalCutiTahunan}
+            isApprovalPage={true}
           />
         );
       case 'cetak':

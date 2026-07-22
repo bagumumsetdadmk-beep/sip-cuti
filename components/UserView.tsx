@@ -27,7 +27,7 @@ export default function UserView({ users, pegawai, addUser, updateUser, deleteUs
   // Form States
   const [username, setUsername] = useState('');
   const [nama, setNama] = useState('');
-  const [role, setRole] = useState<'Admin' | 'Operator' | 'Verifikator'>('Operator');
+  const [role, setRole] = useState<PengaturanUser['role']>('Operator');
   const [password, setPassword] = useState('');
   const [pegawaiId, setPegawaiId] = useState('');
 
@@ -191,6 +191,10 @@ export default function UserView({ users, pegawai, addUser, updateUser, deleteUs
                           ? 'bg-rose-50 text-rose-800 border border-rose-100'
                           : u.role === 'Verifikator'
                           ? 'bg-amber-50 text-amber-800 border border-amber-100'
+                          : u.role === 'Atasan'
+                          ? 'bg-blue-50 text-blue-800 border border-blue-100'
+                          : u.role === 'Pejabat'
+                          ? 'bg-purple-50 text-purple-800 border border-purple-100'
                           : 'bg-slate-100 text-slate-800 border border-slate-200'
                       }`}>
                         {u.role}
@@ -305,6 +309,8 @@ export default function UserView({ users, pegawai, addUser, updateUser, deleteUs
                     <option value="Admin">Admin Setda</option>
                     <option value="Operator">Operator</option>
                     <option value="Verifikator">Verifikator</option>
+                    <option value="Atasan">Atasan Langsung (TTE)</option>
+                    <option value="Pejabat">Pejabat Penanggung Jawab (TTE)</option>
                   </select>
                 </div>
 

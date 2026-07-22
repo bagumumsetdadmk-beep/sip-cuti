@@ -71,7 +71,11 @@ const mapPengajuan = (p: any): PengajuanCuti => ({
   atasanId: p.atasan_id || '',
   pejabatId: p.pejabat_id || '',
   tanggalPengajuan: p.tanggal_pengajuan,
-  noTelpHubungi: p.no_telp_hubungi || ''
+  noTelpHubungi: p.no_telp_hubungi || '',
+  ttdDigitalPemohon: p.ttd_digital_pemohon !== undefined ? p.ttd_digital_pemohon : true,
+  ttdDigitalAtasan: p.ttd_digital_atasan !== undefined ? p.ttd_digital_atasan : true,
+  ttdDigitalPejabat: p.ttd_digital_pejabat !== undefined ? p.ttd_digital_pejabat : true,
+  metodePenandatanganan: p.metode_penandatanganan || ((p.ttd_digital_atasan !== false && p.ttd_digital_pejabat !== false) ? 'TTE' : 'MANUAL')
 });
 
 export function useAppData() {
@@ -442,7 +446,11 @@ export function useAppData() {
       numSurat = `000.1.2/${randomNum}/SETDA-${code}/${new Date().getFullYear()}`;
     }
 
-    const payload = {
+    const ttdPemohon = p.ttdDigitalPemohon !== undefined ? p.ttdDigitalPemohon : true;
+    const ttdAtasan = p.ttdDigitalAtasan !== undefined ? p.ttdDigitalAtasan : true;
+    const ttdPejabat = p.ttdDigitalPejabat !== undefined ? p.ttdDigitalPejabat : true;
+
+    const payload: any = {
       pegawai_id: p.pegawaiId,
       jenis_cuti_id: p.jenisCutiId,
       tanggal_pengajuan: p.tanggalPengajuan,
@@ -456,12 +464,40 @@ export function useAppData() {
       atasan_id: p.atasanId || null,
       pejabat_id: p.pejabatId || null,
       status: 'Menunggu',
-      nomor_surat: numSurat
+      nomor_surat: numSurat,
+      ttd_digital_pemohon: ttdPemohon,
+      ttd_digital_atasan: ttdAtasan,
+      ttd_digital_pejabat: ttdPejabat,
+      metode_penandatanganan: (ttdAtasan && ttdPejabat) ? 'TTE' : 'MANUAL'
     };
 
-    const { data, error } = await supabase.from('pengajuan_cuti').insert(payload).select().single();
+    let { data, error } = await supabase.from('pengajuan_cuti').insert(payload).select().single();
+    if (error) {
+      console.warn('Error inserting with TTE columns, retrying fallback:', error.message);
+      const fallbackPayload = { ...payload };
+      delete fallbackPayload.ttd_digital_pemohon;
+      delete fallbackPayload.ttd_digital_atasan;
+      delete fallbackPayload.ttd_digital_pejabat;
+      delete fallbackPayload.metode_penandatanganan;
+      const retry = await supabase.from('pengajuan_cuti').insert(fallbackPayload).select().single();
+      if (!retry.error && retry.data) {
+        data = {
+          ...retry.data,
+          ttd_digital_pemohon: ttdPemohon,
+          ttd_digital_atasan: ttdAtasan,
+          ttd_digital_pejabat: ttdPejabat,
+          metode_penandatanganan: (ttdAtasan && ttdPejabat) ? 'TTE' : 'MANUAL'
+        };
+        error = null;
+      }
+    }
+
     if (!error && data) {
       const newPj = mapPengajuan(data);
+      newPj.ttdDigitalPemohon = ttdPemohon;
+      newPj.ttdDigitalAtasan = ttdAtasan;
+      newPj.ttdDigitalPejabat = ttdPejabat;
+      newPj.metodePenandatanganan = (ttdAtasan && ttdPejabat) ? 'TTE' : 'MANUAL';
       setPengajuan([newPj, ...pengajuan]);
       return newPj;
     }
@@ -471,6 +507,9 @@ export function useAppData() {
 
   const updatePengajuan = async (id: string, p: Partial<PengajuanCuti>) => {
     const payload: any = {};
+    if (p.pegawaiId !== undefined) payload.pegawai_id = p.pegawaiId;
+    if (p.jenisCutiId !== undefined) payload.jenis_cuti_id = p.jenisCutiId;
+    if (p.tanggalPengajuan !== undefined) payload.tanggal_pengajuan = p.tanggalPengajuan;
     if (p.tanggalMulai !== undefined) payload.tanggal_mulai = p.tanggalMulai;
     if (p.tanggalSelesai !== undefined) payload.tanggal_selesai = p.tanggalSelesai;
     if (p.jumlahHari !== undefined) payload.jumlah_hari = p.jumlahHari;
@@ -484,8 +523,49 @@ export function useAppData() {
     if (p.catatanPerbaikan !== undefined) payload.catatan_atasan = p.catatanPerbaikan;
     if (p.nomorSurat !== undefined) payload.nomor_surat = p.nomorSurat;
 
-    const { data, error } = await supabase.from('pengajuan_cuti').update(payload).eq('id', id).select().single();
-    if (!error && data) setPengajuan(pengajuan.map(item => item.id === id ? mapPengajuan(data) : item));
+    if (p.ttdDigitalPemohon !== undefined) payload.ttd_digital_pemohon = p.ttdDigitalPemohon;
+    if (p.ttdDigitalAtasan !== undefined) payload.ttd_digital_atasan = p.ttdDigitalAtasan;
+    if (p.ttdDigitalPejabat !== undefined) payload.ttd_digital_pejabat = p.ttdDigitalPejabat;
+    if (p.ttdDigitalAtasan !== undefined || p.ttdDigitalPejabat !== undefined) {
+      payload.metode_penandatanganan = (p.ttdDigitalAtasan && p.ttdDigitalPejabat) ? 'TTE' : 'MANUAL';
+    }
+
+    let { data, error } = await supabase.from('pengajuan_cuti').update(payload).eq('id', id).select().single();
+    if (error) {
+      console.warn('Error updating with TTE columns, retrying fallback:', error.message);
+      const fallbackPayload = { ...payload };
+      delete fallbackPayload.ttd_digital_pemohon;
+      delete fallbackPayload.ttd_digital_atasan;
+      delete fallbackPayload.ttd_digital_pejabat;
+      delete fallbackPayload.metode_penandatanganan;
+      const retry = await supabase.from('pengajuan_cuti').update(fallbackPayload).eq('id', id).select().single();
+      if (!retry.error && retry.data) {
+        data = {
+          ...retry.data,
+          ttd_digital_pemohon: p.ttdDigitalPemohon,
+          ttd_digital_atasan: p.ttdDigitalAtasan,
+          ttd_digital_pejabat: p.ttdDigitalPejabat
+        };
+        error = null;
+      }
+    }
+
+    if (!error && data) {
+      const mapped = mapPengajuan(data);
+      if (p.pegawaiId !== undefined) mapped.pegawaiId = p.pegawaiId;
+      if (p.jenisCutiId !== undefined) mapped.jenisCutiId = p.jenisCutiId;
+      if (p.tanggalPengajuan !== undefined) mapped.tanggalPengajuan = p.tanggalPengajuan;
+      if (p.ttdDigitalPemohon !== undefined) mapped.ttdDigitalPemohon = p.ttdDigitalPemohon;
+      if (p.ttdDigitalAtasan !== undefined) mapped.ttdDigitalAtasan = p.ttdDigitalAtasan;
+      if (p.ttdDigitalPejabat !== undefined) mapped.ttdDigitalPejabat = p.ttdDigitalPejabat;
+      if (p.ttdDigitalAtasan !== undefined || p.ttdDigitalPejabat !== undefined) {
+        mapped.metodePenandatanganan = (mapped.ttdDigitalAtasan && mapped.ttdDigitalPejabat) ? 'TTE' : 'MANUAL';
+      }
+      setPengajuan(pengajuan.map(item => item.id === id ? mapped : item));
+    } else {
+      // Local state fallback in case of connection or table error
+      setPengajuan(pengajuan.map(item => item.id === id ? { ...item, ...p } : item));
+    }
   };
 
   const updatePengajuanStatus = async (id: string, status: PengajuanCuti['status'], catatan?: string) => {

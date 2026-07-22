@@ -69,6 +69,13 @@ export default function DashboardView({
     return jenisCuti.find(jc => jc.id === id)?.nama || 'Cuti';
   };
 
+  const isHariKalender = (jenisCutiId: string) => {
+    const selected = jenisCuti.find(jc => jc.id === jenisCutiId);
+    if (!selected) return false;
+    const nameLower = selected.nama.toLowerCase();
+    return nameLower.includes('sakit') || nameLower.includes('melahirkan') || nameLower.includes('besar') || nameLower.includes('luar tanggungan');
+  };
+
   // Filter pengajuan terbaru
   const pengajuanTerbaru = pengajuan.slice(0, 5);
 
@@ -293,7 +300,7 @@ export default function DashboardView({
                         </span>
                       </div>
                       <p className="text-slate-500 font-medium text-[11px]">
-                        {getJenisCutiNama(p.jenisCutiId)} • {p.jumlahHari} hari
+                        {getJenisCutiNama(p.jenisCutiId)} • {p.jumlahHari} {isHariKalender(p.jenisCutiId) ? 'hari kalender' : 'hari kerja'}
                       </p>
                       <p className="text-[10px] text-slate-400 italic line-clamp-1">
                         &quot;{p.alasan}&quot;

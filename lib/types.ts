@@ -53,7 +53,7 @@ export interface PengajuanCuti {
   jumlahHari: number;
   alasan: string;
   alamatSelamaCuti: string;
-  status: 'Menunggu' | 'Disetujui' | 'Ditolak' | 'Dalam Perbaikan' | 'Sudah Diperbaiki';
+  status: 'Menunggu' | 'Menunggu Atasan' | 'Menunggu Pejabat' | 'Disetujui' | 'Ditolak' | 'Dalam Perbaikan' | 'Sudah Diperbaiki';
   catatanPerbaikan?: string;
   berkasPendukung?: string; // Base64 or filename
   atasanId: string; // Atasan langsung
@@ -63,6 +63,7 @@ export interface PengajuanCuti {
   ttdDigitalPemohon?: boolean;
   ttdDigitalAtasan?: boolean;
   ttdDigitalPejabat?: boolean;
+  metodePenandatanganan?: 'TTE' | 'MANUAL';
 }
 
 export interface PengaturanInstansi {
@@ -81,7 +82,7 @@ export interface PengaturanUser {
   id: string;
   username: string;
   nama: string;
-  role: 'Admin' | 'Operator' | 'Verifikator';
+  role: 'Admin' | 'Operator' | 'Verifikator' | 'Atasan' | 'Pejabat';
   password: string;
-  pegawaiId?: string; // Menghubungkan user dengan data pegawai tertentu (terutama Operator/Verifikator)
+  pegawaiId?: string; // Menghubungkan user dengan data pegawai tertentu (Atasan/Pejabat/Operator/Verifikator)
 }
