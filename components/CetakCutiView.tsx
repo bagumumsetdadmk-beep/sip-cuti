@@ -182,6 +182,10 @@ export default function CetakCutiView({ pengajuan, pegawai, jenisCuti, sisaCuti,
         const showQRAtasan = isTTEFull && selectedPrint.ttdDigitalAtasan !== false;
         const showQRPejabat = isTTEFull && selectedPrint.ttdDigitalPejabat !== false;
 
+        const appOrigin = typeof window !== 'undefined' ? window.location.origin : 'https://sip-cuti.demakkab.go.id';
+        const verificationUrl = `${appOrigin}/verifikasi?id=${encodeURIComponent(selectedPrint.id)}`;
+        const dynamicQrCode = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(verificationUrl)}`;
+
         return (
           <div className="fixed inset-0 bg-gray-100 md:bg-black/50 overflow-y-auto z-50 flex items-start justify-center p-0 md:p-6 transition-all">
             <div className="bg-white w-full max-w-[850px] shadow-2xl border-0 md:border border-gray-300 md:rounded-xl overflow-hidden flex flex-col my-0 md:my-4 print:my-0">
@@ -559,7 +563,14 @@ export default function CetakCutiView({ pengajuan, pegawai, jenisCuti, sisaCuti,
                       <div className="p-1"></div>
                     </div>
                     <div className="grid grid-cols-12">
-                      <div className="col-span-6 border-r-[0.5px] border-black"></div>
+                      <div className="col-span-6 border-r-[0.5px] border-black p-2 flex items-center gap-2">
+                        <img
+                          src={dynamicQrCode}
+                          alt="QR Code Verifikasi Dokumen Cuti"
+                          className="w-16 h-16 object-contain shrink-0 border border-black/10 p-0.5"
+                          referrerPolicy="no-referrer"
+                        />
+                      </div>
                       <div className="col-span-6 flex flex-row">
                         <div className="w-1/3 flex items-center justify-center p-2 shrink-0">
                            {showQRPejabat ? (
