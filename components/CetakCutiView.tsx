@@ -579,17 +579,13 @@ export default function CetakCutiView({ pengajuan, pegawai, jenisCuti, sisaCuti,
                       <div className="p-1"></div>
                     </div>
                     <div className="grid grid-cols-12">
-                      <div className="col-span-6 border-r-[0.5px] border-black p-2 flex items-center gap-2">
+                      <div className="col-span-6 border-r-[0.5px] border-black p-2 flex items-center justify-center pl-6">
                         <img
                           src={dynamicQrCode}
                           alt="QR Code Verifikasi Dokumen Cuti"
                           className="w-20 h-20 sm:w-24 sm:h-24 print:w-24 print:h-24 object-contain shrink-0"
                           referrerPolicy="no-referrer"
                         />
-                        <div className="text-[9px] leading-tight text-gray-700 font-sans">
-                          <p className="font-bold text-gray-900 uppercase">Verifikasi Digital</p>
-                          <p className="text-[8px] text-gray-600">Scan QR Code untuk memverifikasi keaslian dokumen cuti ini.</p>
-                        </div>
                       </div>
                       <div className="col-span-6 flex flex-row">
                         <div className="w-1/3 flex items-center justify-center p-2 shrink-0">
