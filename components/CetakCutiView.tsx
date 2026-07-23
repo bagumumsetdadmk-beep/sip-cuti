@@ -400,7 +400,7 @@ export default function CetakCutiView({ pengajuan, pegawai, jenisCuti, sisaCuti,
                     <div className="p-1 font-bold border-b-[0.5px] border-black uppercase">IV. LAMANYA CUTI</div>
                     <div className="grid grid-cols-12">
                       <div className="col-span-1 p-1 border-r-[0.5px] border-black whitespace-nowrap">Selama</div>
-                      <div className="col-span-3 p-1 border-r-[0.5px] border-black font-semibold">{selectedPrint.jumlahHari} ({isHariKalender(selectedPrint.jenisCutiId) ? 'hari kalender' : 'hari kerja'})</div>
+                      <div className="col-span-3 p-1 border-r-[0.5px] border-black font-semibold">{selectedPrint.jumlahHari} ({isHariKalender ? 'hari kalender' : 'hari kerja'})</div>
                       <div className="col-span-2 p-1 border-r-[0.5px] border-black whitespace-nowrap">Mulai Tanggal</div>
                       <div className="col-span-2 p-1 border-r-[0.5px] border-black font-semibold text-center">{selectedPrint.tanggalMulai}</div>
                       <div className="col-span-1 p-1 border-r-[0.5px] border-black text-center whitespace-nowrap">s/d</div>
