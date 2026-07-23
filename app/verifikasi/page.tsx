@@ -24,18 +24,18 @@ export default function VerifikasiPage() {
     return '';
   };
 
-  const paramId = getParam('id') || getParam('nomor');
-  const paramNomor = getParam('nomor');
-  const paramNama = getParam('nama');
+  const paramId = getParam('id') || getParam('no') || getParam('nomor');
+  const paramNomor = getParam('no') || getParam('nomor');
+  const paramNama = getParam('nm') || getParam('nama');
   const paramNip = getParam('nip');
-  const paramJabatan = getParam('jabatan');
-  const paramKategori = getParam('kategori');
-  const paramDurasi = getParam('durasi');
-  const paramMulai = getParam('mulai');
-  const paramSelesai = getParam('selesai');
-  const paramAlasan = getParam('alasan');
-  const paramTelp = getParam('telp');
-  const paramAlamat = getParam('alamat');
+  const paramJabatan = getParam('j') || getParam('jabatan');
+  const paramKategori = getParam('cat') || getParam('kategori');
+  const paramDurasi = getParam('dur') || getParam('durasi');
+  const paramMulai = getParam('m') || getParam('mulai');
+  const paramSelesai = getParam('s') || getParam('selesai');
+  const paramAlasan = getParam('als') || getParam('alasan');
+  const paramTelp = getParam('tlp') || getParam('telp');
+  const paramAlamat = getParam('alm') || getParam('alamat');
 
   // Load from local storage if available
   const [pegawaiList] = useState<Pegawai[]>(() => {
