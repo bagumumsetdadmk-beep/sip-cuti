@@ -13,22 +13,11 @@ interface CetakCutiViewProps {
   sisaCuti: SisaCutiTahunan[];
   instansi: PengaturanInstansi;
   currentUser?: { role: string; pegawaiId?: string; } | null;
-  mode?: 'normal' | 'verifikasi';
-  verifikasiPengajuanId?: string;
-  onTutupVerifikasi?: () => void;
 }
 
-export default function CetakCutiView({ pengajuan, pegawai, jenisCuti, sisaCuti, instansi, currentUser, mode = 'normal', verifikasiPengajuanId, onTutupVerifikasi }: CetakCutiViewProps) {
+export default function CetakCutiView({ pengajuan, pegawai, jenisCuti, sisaCuti, instansi, currentUser }: CetakCutiViewProps) {
   const [searchTerm, setSearchTerm] = useState('');
-  
-  const verifikasiTarget = mode === 'verifikasi' && verifikasiPengajuanId 
-    ? pengajuan.find(p => p.id === verifikasiPengajuanId || p.nomorSurat === verifikasiPengajuanId) || null 
-    : null;
-
-  const [selectedPrintState, setSelectedPrintState] = useState<PengajuanCuti | null>(null);
-
-  const selectedPrint = mode === 'verifikasi' ? verifikasiTarget : selectedPrintState;
-  const setSelectedPrint = mode === 'verifikasi' ? () => {} : setSelectedPrintState;
+  const [selectedPrint, setSelectedPrint] = useState<PengajuanCuti | null>(null);
 
   const getPegawaiNama = (id: string) => pegawai.find(p => p.id === id)?.nama || '';
   const getPegawaiDetail = (id: string) => pegawai.find(p => p.id === id);
@@ -77,7 +66,6 @@ export default function CetakCutiView({ pengajuan, pegawai, jenisCuti, sisaCuti,
   return (
     <div className="space-y-6">
       {/* List Cetak (no-print) */}
-      {mode !== 'verifikasi' && (
       <div className={`space-y-6 ${selectedPrint ? 'no-print hidden md:block' : ''}`}>
         <div>
           <h3 className="text-base font-bold text-gray-800">Cetak Formulir Cuti ASN Resmi</h3>
@@ -179,7 +167,6 @@ export default function CetakCutiView({ pengajuan, pegawai, jenisCuti, sisaCuti,
           </div>
         </div>
       </div>
-      )}
 
       {/* MODAL PRINT PREVIEW RESMI BKN (Aktif saat selectedPrint terisi) */}
       {selectedPrint && (() => {
@@ -200,8 +187,8 @@ export default function CetakCutiView({ pengajuan, pegawai, jenisCuti, sisaCuti,
         const dynamicQrCode = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(verificationUrl)}`;
 
         return (
-          <div className={mode === 'verifikasi' ? "flex items-start justify-center p-0 w-full" : "fixed inset-0 bg-gray-100 md:bg-black/50 overflow-y-auto z-50 flex items-start justify-center p-0 md:p-6 transition-all"}>
-            <div className={`bg-white w-full max-w-[850px] overflow-hidden flex flex-col ${mode === 'verifikasi' ? 'shadow-sm border border-slate-200 rounded-2xl print:border-none print:shadow-none' : 'shadow-2xl border-0 md:border border-gray-300 md:rounded-xl my-0 md:my-4 print:my-0'}`}>
+          <div className="fixed inset-0 bg-gray-100 md:bg-black/50 overflow-y-auto z-50 flex items-start justify-center p-0 md:p-6 transition-all">
+            <div className="bg-white w-full max-w-[850px] shadow-2xl border-0 md:border border-gray-300 md:rounded-xl overflow-hidden flex flex-col my-0 md:my-4 print:my-0">
               
               {/* Toolbar Atas (No-print) */}
               <div className="p-4 bg-slate-900 text-white flex flex-col gap-3 no-print shrink-0 border-b border-slate-800">
@@ -228,10 +215,10 @@ export default function CetakCutiView({ pengajuan, pegawai, jenisCuti, sisaCuti,
                     </button>
                     <button
                       id="btn-tutup-cetak"
-                      onClick={() => mode === 'verifikasi' && onTutupVerifikasi ? onTutupVerifikasi() : setSelectedPrint(null)}
+                      onClick={() => setSelectedPrint(null)}
                       className="p-1.5 hover:bg-slate-800 text-white rounded transition-all cursor-pointer"
                     >
-                      {mode === 'verifikasi' ? <span className="font-bold text-xs px-2">Tutup Dokumen</span> : <X className="w-4 h-4" />}
+                      <X className="w-4 h-4" />
                     </button>
                   </div>
                 </div>
@@ -583,11 +570,6 @@ export default function CetakCutiView({ pengajuan, pegawai, jenisCuti, sisaCuti,
                           className="w-16 h-16 object-contain shrink-0 border border-black/10 p-0.5"
                           referrerPolicy="no-referrer"
                         />
-                        <div className="text-[8px] leading-tight text-gray-800">
-                          <p className="font-bold uppercase tracking-tight">VERIFIKASI DOKUMEN CUTI</p>
-                          <p className="text-[7px] text-gray-600 mt-0.5">Pindai QR Code ini untuk menampilkan formulir cuti digital resmi & status TTE.</p>
-                          <p className="font-mono text-[7px] text-emerald-800 font-bold mt-1">ID: {selectedPrint.id}</p>
-                        </div>
                       </div>
                       <div className="col-span-6 flex flex-row">
                         <div className="w-1/3 flex items-center justify-center p-2 shrink-0">
