@@ -98,7 +98,7 @@ export default function VerifikasiPage() {
     ) || null;
   }
 
-  // Fallback to query params if not found in local storage
+  // Fallback to query params if available (scanned from QR Code)
   const hasQueryParams = Boolean(paramNama || paramKategori || paramNomor);
 
   // Ambil data pemohon
@@ -115,7 +115,22 @@ export default function VerifikasiPage() {
   let statusPengajuan = 'Disetujui';
   let isPNS = true;
 
-  if (foundPengajuan) {
+  if (hasQueryParams) {
+    // Priority 1: Exact parameters embedded in the scanned QR Code URL
+    pemohonNama = paramNama || 'NAMA PEGAWAI';
+    pemohonNip = paramNip ? (paramNip.includes('NIP') || paramNip.includes('NI PPPK') ? paramNip : `NIP. ${paramNip}`) : '-';
+    pemohonJabatan = paramJabatan || '-';
+    kategoriCuti = paramKategori || 'Cuti Tahunan';
+    nomorSurat = paramNomor || '-';
+    durasiPengajuan = paramDurasi || '-';
+    rentangTanggal = paramMulai && paramSelesai ? `${paramMulai} s.d ${paramSelesai}` : (paramMulai ? `${paramMulai} s.d ${paramSelesai}` : '-');
+    alasanPengajuan = paramAlasan || '-';
+    noTelp = paramTelp || '-';
+    alamatCuti = paramAlamat || '-';
+    statusPengajuan = 'Disetujui';
+    isPNS = !paramNip.toUpperCase().includes('NI PPPK') && !paramNip.toUpperCase().includes('PPPK');
+  } else if (foundPengajuan) {
+    // Priority 2: Look up pengajuan from local storage / state if query params not provided
     const pDetail = pegawaiList.find(p => p.id === foundPengajuan?.pegawaiId);
     const jcSelected = jenisCutiList.find(jc => jc.id === foundPengajuan?.jenisCutiId);
     

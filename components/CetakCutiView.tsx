@@ -193,11 +193,11 @@ export default function CetakCutiView({ pengajuan, pegawai, jenisCuti, sisaCuti,
           jabatan: pDetail?.jabatan || '',
           kategori: jcSelected?.nama || 'Cuti Tahunan',
           durasi: durasiText,
-          mulai: selectedPrint.tanggalMulai,
-          selesai: selectedPrint.tanggalSelesai,
-          alasan: selectedPrint.alasan,
-          telp: selectedPrint.noTelpHubungi,
-          alamat: selectedPrint.alamatSelamaCuti
+          mulai: selectedPrint.tanggalMulai || '',
+          selesai: selectedPrint.tanggalSelesai || '',
+          alasan: selectedPrint.alasan || '',
+          telp: selectedPrint.noTelpHubungi || pDetail?.noHp || '',
+          alamat: selectedPrint.alamatSelamaCuti || ''
         }).toString();
         const verificationUrl = `${appOrigin}/verifikasi?${queryParams}`;
         const dynamicQrCode = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(verificationUrl)}`;
