@@ -1,7 +1,5 @@
 'use client';
 
-export const dynamic = 'force-dynamic';
-
 import React, { useState, useEffect } from 'react';
 import { CheckCircle2, User, FileText, ArrowLeft, Printer, FileCheck } from 'lucide-react';
 import { initialPengajuanCuti, initialPegawai, initialJenisCuti, defaultPengaturanInstansi, initialSisaCutiTahunan } from '../../lib/initialData';
