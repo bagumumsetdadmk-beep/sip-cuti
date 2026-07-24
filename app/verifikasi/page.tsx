@@ -329,7 +329,7 @@ export default function VerifikasiPage({ routeId }: { routeId?: string } = {}) {
         <div className="bg-emerald-50/90 border border-emerald-200/80 rounded-2xl p-3.5 flex items-center justify-between gap-3 text-xs text-emerald-900 font-medium">
           <div className="flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-            <span>Dokumen Cuti Digital terverifikasi <strong>SAH &amp; Resmi (TTE BSrE/BSSN)</strong></span>
+            <span>Dokumen Cuti Digital terverifikasi <strong>SAH &amp; Resmi </strong></span>
           </div>
           <span className="bg-emerald-600 text-white px-2.5 py-0.5 rounded-full font-bold text-[10px] uppercase tracking-wider shrink-0">
             {statusPengajuan}
