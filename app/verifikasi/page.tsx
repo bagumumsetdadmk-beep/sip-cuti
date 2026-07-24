@@ -5,7 +5,7 @@ import { CheckCircle2, User, FileText, ArrowLeft, Printer, FileCheck } from 'luc
 import { initialPengajuanCuti, initialPegawai, initialJenisCuti, defaultPengaturanInstansi, initialSisaCutiTahunan } from '../../lib/initialData';
 import { PengajuanCuti, Pegawai, JenisCuti, SisaCutiTahunan } from '../../lib/types';
 
-export default function VerifikasiPage() {
+export default function VerifikasiPage({ routeId }: { routeId?: string } = {}) {
   const [mounted, setMounted] = useState(false);
   const [showFullBKN, setShowFullBKN] = useState(false);
 
@@ -22,7 +22,7 @@ export default function VerifikasiPage() {
     return '';
   };
 
-  const paramId = getParam('id') || getParam('no') || getParam('nomor');
+  const paramId = routeId || getParam('id') || getParam('no') || getParam('nomor');
   const paramNomor = getParam('no') || getParam('nomor');
   const paramNama = getParam('nm') || getParam('nama');
   const paramNip = getParam('nip');
@@ -97,7 +97,7 @@ export default function VerifikasiPage() {
   }
 
   // Fallback to query params if available (scanned from QR Code)
-  const hasQueryParams = Boolean(paramNama || paramKategori || paramNomor);
+  const hasQueryParams = Boolean(paramNama || paramKategori || paramNomor || paramNip);
 
   // Ambil data pemohon
   let pemohonNama = '';
@@ -113,51 +113,41 @@ export default function VerifikasiPage() {
   let statusPengajuan = 'Disetujui';
   let isPNS = true;
 
-  if (hasQueryParams) {
-    // Priority 1: Exact parameters embedded in the scanned QR Code URL
+  if (foundPengajuan) {
+    // Priority 1: Record found in local storage / database
+    const pDetail = pegawaiList.find(p => p.id === foundPengajuan?.pegawaiId);
+    const jcSelected = jenisCutiList.find(jc => jc.id === foundPengajuan?.jenisCutiId);
+    
+    pemohonNama = pDetail?.nama || paramNama || 'NAMA PEGAWAI';
+    pemohonNip = pDetail?.nip ? `${pDetail.statusPegawai === 'PPPK' ? 'NI PPPK' : 'NIP'}. ${pDetail.nip}` : (paramNip ? (paramNip.includes('NIP') || paramNip.includes('NI PPPK') ? paramNip : `NIP. ${paramNip}`) : '-');
+    pemohonJabatan = pDetail?.jabatan || paramJabatan || '-';
+    kategoriCuti = jcSelected?.nama || paramKategori || 'Cuti Tahunan';
+    nomorSurat = foundPengajuan.nomorSurat || paramNomor || '-';
+    
+    const isHariKalender = kategoriCuti.toLowerCase().includes('sakit') || kategoriCuti.toLowerCase().includes('melahirkan') || kategoriCuti.toLowerCase().includes('besar');
+    durasiPengajuan = paramDurasi || `${foundPengajuan.jumlahHari} Hari ${isHariKalender ? 'Kalender' : 'Kerja'}`;
+    rentangTanggal = (foundPengajuan.tanggalMulai && foundPengajuan.tanggalSelesai) 
+      ? `${foundPengajuan.tanggalMulai} s.d ${foundPengajuan.tanggalSelesai}`
+      : (paramMulai && paramSelesai ? `${paramMulai} s.d ${paramSelesai}` : '-');
+    alasanPengajuan = foundPengajuan.alasan || paramAlasan || '-';
+    noTelp = foundPengajuan.noTelpHubungi || paramTelp || '-';
+    alamatCuti = foundPengajuan.alamatSelamaCuti || paramAlamat || '-';
+    statusPengajuan = foundPengajuan.status || 'Disetujui';
+    isPNS = pDetail ? pDetail.statusPegawai === 'PNS' : !paramNip.toUpperCase().includes('PPPK');
+  } else if (hasQueryParams) {
+    // Priority 2: Parameters embedded in URL query parameters
     pemohonNama = paramNama || 'NAMA PEGAWAI';
     pemohonNip = paramNip ? (paramNip.includes('NIP') || paramNip.includes('NI PPPK') ? paramNip : `NIP. ${paramNip}`) : '-';
     pemohonJabatan = paramJabatan || '-';
     kategoriCuti = paramKategori || 'Cuti Tahunan';
     nomorSurat = paramNomor || '-';
     durasiPengajuan = paramDurasi || '-';
-    rentangTanggal = paramMulai && paramSelesai ? `${paramMulai} s.d ${paramSelesai}` : (paramMulai ? `${paramMulai} s.d ${paramSelesai}` : '-');
+    rentangTanggal = paramMulai && paramSelesai ? `${paramMulai} s.d ${paramSelesai}` : (paramMulai ? `${paramMulai}` : '-');
     alasanPengajuan = paramAlasan || '-';
     noTelp = paramTelp || '-';
     alamatCuti = paramAlamat || '-';
     statusPengajuan = 'Disetujui';
     isPNS = !paramNip.toUpperCase().includes('NI PPPK') && !paramNip.toUpperCase().includes('PPPK');
-  } else if (foundPengajuan) {
-    // Priority 2: Look up pengajuan from local storage / state if query params not provided
-    const pDetail = pegawaiList.find(p => p.id === foundPengajuan?.pegawaiId);
-    const jcSelected = jenisCutiList.find(jc => jc.id === foundPengajuan?.jenisCutiId);
-    
-    pemohonNama = pDetail?.nama || 'NAMA PEGAWAI';
-    pemohonNip = pDetail?.nip ? `${pDetail.statusPegawai === 'PPPK' ? 'NI PPPK' : 'NIP'}. ${pDetail.nip}` : '-';
-    pemohonJabatan = pDetail?.jabatan || '-';
-    kategoriCuti = jcSelected?.nama || 'Cuti Tahunan';
-    nomorSurat = foundPengajuan.nomorSurat || '800.1.2.3/SETDA/2026/001';
-    
-    const isHariKalender = kategoriCuti.toLowerCase().includes('sakit') || kategoriCuti.toLowerCase().includes('melahirkan') || kategoriCuti.toLowerCase().includes('besar');
-    durasiPengajuan = `${foundPengajuan.jumlahHari} Hari ${isHariKalender ? 'Kalender' : 'Kerja'}`;
-    rentangTanggal = `${foundPengajuan.tanggalMulai} s.d ${foundPengajuan.tanggalSelesai}`;
-    alasanPengajuan = foundPengajuan.alasan || '-';
-    noTelp = foundPengajuan.noTelpHubungi || '-';
-    alamatCuti = foundPengajuan.alamatSelamaCuti || '-';
-    statusPengajuan = foundPengajuan.status || 'Disetujui';
-    isPNS = pDetail?.statusPegawai === 'PNS';
-  } else if (hasQueryParams) {
-    pemohonNama = paramNama || 'SITI NUR ALIMAH, S.M.';
-    pemohonNip = paramNip ? (paramNip.includes('NIP') || paramNip.includes('NI PPPK') ? paramNip : `NIP. ${paramNip}`) : 'NIP. 198306162014062006';
-    pemohonJabatan = paramJabatan || 'Penelaah Teknis Kebijakan';
-    kategoriCuti = paramKategori || 'Cuti Melahirkan';
-    nomorSurat = paramNomor || '800.1.2.3/678';
-    durasiPengajuan = paramDurasi || '20 Hari Kalender';
-    rentangTanggal = paramMulai && paramSelesai ? `${paramMulai} s.d ${paramSelesai}` : '2026-07-28 s.d 2026-08-16';
-    alasanPengajuan = paramAlasan || 'keperluan keluarga saya';
-    noTelp = paramTelp || '1234567';
-    alamatCuti = paramAlamat || 'botorejo demak';
-    statusPengajuan = 'Disetujui';
   } else if (pengajuanList.length > 0) {
     // Ultimate fallback if nothing specified
     const activeP = pengajuanList.find(p => p.status === 'Disetujui') || pengajuanList[0];

@@ -183,8 +183,24 @@ export default function CetakCutiView({ pengajuan, pegawai, jenisCuti, sisaCuti,
         const showQRPejabat = isTTEFull && selectedPrint.ttdDigitalPejabat !== false;
 
         const isHariKalender = namaCutiLower.includes('sakit') || namaCutiLower.includes('melahirkan') || namaCutiLower.includes('besar');
+        const durasiText = `${selectedPrint.jumlahHari} Hari ${isHariKalender ? 'Kalender' : 'Kerja'}`;
+        const queryParams = new URLSearchParams({
+          id: selectedPrint.id,
+          no: selectedPrint.nomorSurat || '',
+          nm: pDetail?.nama || '',
+          nip: pDetail?.nip || '',
+          j: pDetail?.jabatan || '',
+          cat: jcSelected?.nama || 'Cuti Tahunan',
+          dur: durasiText,
+          m: selectedPrint.tanggalMulai || '',
+          s: selectedPrint.tanggalSelesai || '',
+          als: selectedPrint.alasan || '',
+          tlp: selectedPrint.noTelpHubungi || pDetail?.noHp || '',
+          alm: selectedPrint.alamatSelamaCuti || ''
+        }).toString();
+
         const appOrigin = typeof window !== 'undefined' ? window.location.origin : 'https://sip-cuti.demakkab.go.id';
-        const verificationUrl = `${appOrigin}/verifikasi?id=${encodeURIComponent(selectedPrint.id)}${selectedPrint.nomorSurat ? `&no=${encodeURIComponent(selectedPrint.nomorSurat)}` : ''}`;
+        const verificationUrl = `${appOrigin}/verifikasi?${queryParams}`;
         const dynamicQrCode = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&ecc=L&margin=1&data=${encodeURIComponent(verificationUrl)}`;
 
         return (
