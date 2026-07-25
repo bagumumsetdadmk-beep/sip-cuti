@@ -184,12 +184,12 @@ export default function CetakCutiView({ pengajuan, pegawai, jenisCuti, sisaCuti,
 
         const isHariKalender = namaCutiLower.includes('sakit') || namaCutiLower.includes('melahirkan') || namaCutiLower.includes('besar');
         const durasiText = `${selectedPrint.jumlahHari} Hari ${isHariKalender ? 'Kalender' : 'Kerja'}`;
-        const queryParams = new URLSearchParams({
-          id: selectedPrint.id,
+        
+        // Parameter URL QR Code yang sudah diringkas (id & jabatan dihilangkan)
+        const paramsObj: Record<string, string> = {
           no: selectedPrint.nomorSurat || '',
           nm: pDetail?.nama || '',
           nip: pDetail?.nip || '',
-          j: pDetail?.jabatan || '',
           cat: jcSelected?.nama || 'Cuti Tahunan',
           dur: durasiText,
           m: selectedPrint.tanggalMulai || '',
@@ -197,7 +197,14 @@ export default function CetakCutiView({ pengajuan, pegawai, jenisCuti, sisaCuti,
           als: selectedPrint.alasan || '',
           tlp: selectedPrint.noTelpHubungi || pDetail?.noHp || '',
           alm: selectedPrint.alamatSelamaCuti || ''
-        }).toString();
+        };
+        
+        // Filter parameter kosong agar URL lebih pendek dan mudah di-scan
+        Object.keys(paramsObj).forEach(key => {
+          if (!paramsObj[key]) delete paramsObj[key];
+        });
+
+        const queryParams = new URLSearchParams(paramsObj).toString();
 
         const appOrigin = typeof window !== 'undefined' && window.location.origin ? window.location.origin : 'https://sip-cuti.vercel.app';
         const verificationUrl = `${appOrigin}/verifikasi?${queryParams}`;
@@ -613,7 +620,7 @@ export default function CetakCutiView({ pengajuan, pegawai, jenisCuti, sisaCuti,
                 </div>
 
                 {/* Footer Keterangan */}
-                <div className="mt-4 text-[10px] leading-tight font-sans text-gray-600 italic">
+                <div className="mt-0 text-[10px] leading-tight font-sans text-gray-600 italic">
                   <p>Keterangan:</p>
                   <p>* Silakan pilih salah satu atau lebih jenis cuti yang sesuai.</p>
                   <p>** Silakan isi dengan jenis cuti yang diambil.</p>

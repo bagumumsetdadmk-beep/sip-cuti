@@ -136,9 +136,14 @@ export default function VerifikasiPage({ routeId }: { routeId?: string } = {}) {
     isPNS = pDetail ? pDetail.statusPegawai === 'PNS' : !paramNip.toUpperCase().includes('PPPK');
   } else if (hasQueryParams) {
     // Priority 2: Parameters embedded in URL query parameters
-    pemohonNama = paramNama || 'NAMA PEGAWAI';
-    pemohonNip = paramNip ? (paramNip.includes('NIP') || paramNip.includes('NI PPPK') ? paramNip : `NIP. ${paramNip}`) : '-';
-    pemohonJabatan = paramJabatan || '-';
+    const cleanNip = paramNip.replace(/\D/g, '');
+    const pDetailByNip = cleanNip ? pegawaiList.find(p => p.nip && p.nip.replace(/\D/g, '') === cleanNip) : null;
+
+    pemohonNama = paramNama || pDetailByNip?.nama || 'NAMA PEGAWAI';
+    pemohonNip = paramNip 
+      ? (paramNip.includes('NIP') || paramNip.includes('NI PPPK') ? paramNip : `${pDetailByNip?.statusPegawai === 'PPPK' ? 'NI PPPK' : 'NIP'}. ${paramNip}`) 
+      : (pDetailByNip ? `${pDetailByNip.statusPegawai === 'PPPK' ? 'NI PPPK' : 'NIP'}. ${pDetailByNip.nip}` : '-');
+    pemohonJabatan = paramJabatan || pDetailByNip?.jabatan || '-';
     kategoriCuti = paramKategori || 'Cuti Tahunan';
     nomorSurat = paramNomor || '-';
     durasiPengajuan = paramDurasi || '-';
@@ -147,7 +152,7 @@ export default function VerifikasiPage({ routeId }: { routeId?: string } = {}) {
     noTelp = paramTelp || '-';
     alamatCuti = paramAlamat || '-';
     statusPengajuan = 'Disetujui';
-    isPNS = !paramNip.toUpperCase().includes('NI PPPK') && !paramNip.toUpperCase().includes('PPPK');
+    isPNS = pDetailByNip ? pDetailByNip.statusPegawai === 'PNS' : (!paramNip.toUpperCase().includes('NI PPPK') && !paramNip.toUpperCase().includes('PPPK'));
   } else if (pengajuanList.length > 0) {
     // Ultimate fallback if nothing specified
     const activeP = pengajuanList.find(p => p.status === 'Disetujui') || pengajuanList[0];
