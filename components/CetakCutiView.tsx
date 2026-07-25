@@ -494,12 +494,12 @@ export default function CetakCutiView({ pengajuan, pegawai, jenisCuti, sisaCuti,
                                 <img
                                   src={pDetail?.qrCodeUrl || `https://api.qrserver.com/v1/create-qr-code/?size=250x250&ecc=M&margin=1&data=${encodeURIComponent(`SIP-CUTI SETDA DEMAK - VERIFIKASI PEMOHON\nID: ${selectedPrint.id}\nNama: ${pDetail?.nama || ''}\nNIP: ${pDetail?.nip || ''}\nStatus: TTE Pemohon`)}`}
                                   alt="QR Code TTE Pemohon"
-                                  className="w-16 h-16 sm:w-20 sm:h-20 print:w-20 print:h-20 object-contain"
+                                  className="w-16 h-16 sm:w-20 sm:h-20 print:w-[20mm] print:h-[20mm] object-contain"
                                   referrerPolicy="no-referrer"
                                 />
                               </div>
                             ) : (
-                              <div className="w-16 h-16 sm:w-20 sm:h-20 print:w-20 print:h-20"></div>
+                              <div className="w-16 h-16 sm:w-20 sm:h-20 print:w-[20mm] print:h-[20mm]"></div>
                             )}
                             <div className="flex flex-col text-left">
                               <p className="font-bold underline whitespace-nowrap">({pDetail?.nama})</p>
@@ -538,12 +538,12 @@ export default function CetakCutiView({ pengajuan, pegawai, jenisCuti, sisaCuti,
                               <img
                                 src={getPegawaiDetail(selectedPrint.atasanId)?.qrCodeUrl || `https://api.qrserver.com/v1/create-qr-code/?size=250x250&ecc=M&margin=1&data=${encodeURIComponent(`SIP-CUTI SETDA DEMAK - PERTIMBANGAN ATASAN LANGSUNG\nID: ${selectedPrint.id}\nNama Atasan: ${getPegawaiNama(selectedPrint.atasanId)}\nNIP: ${getPegawaiNip(selectedPrint.atasanId)}\nStatus: TTE Atasan`)}`}
                                 alt="QR Code TTE Atasan"
-                                className="w-16 h-16 sm:w-20 sm:h-20 print:w-20 print:h-20 object-contain"
+                                className="w-16 h-16 sm:w-20 sm:h-20 print:w-[20mm] print:h-[20mm] object-contain"
                                 referrerPolicy="no-referrer"
                               />
                             </div>
                           ) : (
-                            <div className="w-16 h-16 sm:w-20 sm:h-20 print:w-20 print:h-20"></div>
+                            <div className="w-16 h-16 sm:w-20 sm:h-20 print:w-[20mm] print:h-[20mm]"></div>
                           )}
                           <div className="flex flex-col text-left">
                             <p className="font-bold underline whitespace-nowrap">({getPegawaiNama(selectedPrint.atasanId)})</p>
@@ -570,12 +570,11 @@ export default function CetakCutiView({ pengajuan, pegawai, jenisCuti, sisaCuti,
                       <div className="p-1"></div>
                     </div>
                     <div className="grid grid-cols-12">
-                      <div className="col-span-6 border-r-[0.5px] border-black p-2 flex items-center justify-center">
+                      <div className="col-span-6 border-r-[0.5px] border-black p-2 flex items-center justify-center min-h-[40mm]">
                         <img
                           src={dynamicQrCode}
                           alt="QR Code Verifikasi Dokumen Cuti"
-                          className="w-40 h-40 object-contain shrink-0"
-                          style={{ width: '200px', height: '200px' }}
+                          className="w-32 h-32 sm:w-36 sm:h-36 print:w-[35mm] print:h-[35mm] object-contain shrink-0"
                           referrerPolicy="no-referrer"
                         />
                       </div>
@@ -589,12 +588,12 @@ export default function CetakCutiView({ pengajuan, pegawai, jenisCuti, sisaCuti,
                               <img
                                 src={getPegawaiDetail(selectedPrint.pejabatId)?.qrCodeUrl || `https://api.qrserver.com/v1/create-qr-code/?size=250x250&ecc=M&margin=1&data=${encodeURIComponent(`SIP-CUTI SETDA DEMAK - KEPUTUSAN PEJABAT YANG BERWENANG\nID: ${selectedPrint.id}\nNama Pejabat: ${getPegawaiNama(selectedPrint.pejabatId)}\nNIP: ${getPegawaiNip(selectedPrint.pejabatId)}\nStatus: TTE Pejabat`)}`}
                                 alt="QR Code TTE Pejabat"
-                                className="w-16 h-16 sm:w-20 sm:h-20 print:w-20 print:h-20 object-contain"
+                                className="w-16 h-16 sm:w-20 sm:h-20 print:w-[20mm] print:h-[20mm] object-contain"
                                 referrerPolicy="no-referrer"
                               />
                             </div>
                           ) : (
-                            <div className="w-16 h-16 sm:w-20 sm:h-20 print:w-20 print:h-20"></div>
+                            <div className="w-16 h-16 sm:w-20 sm:h-20 print:w-[20mm] print:h-[20mm]"></div>
                           )}
                           <div className="flex flex-col text-left">
                             <p className="font-bold underline whitespace-nowrap">({getPegawaiNama(selectedPrint.pejabatId)})</p>
