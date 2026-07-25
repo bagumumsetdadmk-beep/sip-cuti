@@ -184,10 +184,24 @@ export default function CetakCutiView({ pengajuan, pegawai, jenisCuti, sisaCuti,
 
         const isHariKalender = namaCutiLower.includes('sakit') || namaCutiLower.includes('melahirkan') || namaCutiLower.includes('besar');
         const durasiText = `${selectedPrint.jumlahHari} Hari ${isHariKalender ? 'Kalender' : 'Kerja'}`;
-        
-        const appOrigin = typeof window !== 'undefined' ? window.location.origin : 'https://sip-cuti.vercel.app';
-        const verificationUrl = `${appOrigin}/verifikasi?id=${encodeURIComponent(selectedPrint.id)}`;
-        const dynamicQrCode = `https://api.qrserver.com/v1/create-qr-code/?size=500x500&ecc=L&margin=1&data=${encodeURIComponent(verificationUrl)}`;
+        const queryParams = new URLSearchParams({
+          id: selectedPrint.id,
+          no: selectedPrint.nomorSurat || '',
+          nm: pDetail?.nama || '',
+          nip: pDetail?.nip || '',
+          j: pDetail?.jabatan || '',
+          cat: jcSelected?.nama || 'Cuti Tahunan',
+          dur: durasiText,
+          m: selectedPrint.tanggalMulai || '',
+          s: selectedPrint.tanggalSelesai || '',
+          als: selectedPrint.alasan || '',
+          tlp: selectedPrint.noTelpHubungi || pDetail?.noHp || '',
+          alm: selectedPrint.alamatSelamaCuti || ''
+        }).toString();
+
+        const appOrigin = typeof window !== 'undefined' && window.location.origin ? window.location.origin : 'https://sip-cuti.vercel.app';
+        const verificationUrl = `${appOrigin}/verifikasi?${queryParams}`;
+        const dynamicQrCode = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&ecc=L&margin=1&data=${encodeURIComponent(verificationUrl)}`;
 
         return (
           <div className="fixed inset-0 bg-gray-100 md:bg-black/50 overflow-y-auto z-50 flex items-start justify-center p-0 md:p-6 transition-all">
@@ -486,26 +500,22 @@ export default function CetakCutiView({ pengajuan, pegawai, jenisCuti, sisaCuti,
                         </div>
                         
                         {/* Bottom: Signature of Pemohon with optional QR TTE */}
-                        <div className="flex flex-col items-center justify-center p-2 flex-1 min-h-[110px]">
-                          <p className="whitespace-nowrap text-center w-full">Hormat saya,</p>
-                          <div className="flex items-center justify-center gap-1 mt-1">
-                            {showQRPemohon ? (
-                              <div className="shrink-0">
-                                <img
-                                  src={pDetail?.qrCodeUrl || `https://api.qrserver.com/v1/create-qr-code/?size=250x250&ecc=L&margin=1&data=${encodeURIComponent(`SIP-CUTI SETDA DEMAK - VERIFIKASI PEMOHON\nID: ${selectedPrint.id}\nNama: ${pDetail?.nama || ''}\nNIP: ${pDetail?.nip || ''}\nStatus: TTE Pemohon`)}`}
-                                  alt="QR Code TTE Pemohon"
-                                  className="w-16 h-16 sm:w-20 sm:h-20 print:w-[20mm] print:h-[20mm] object-contain"
-                                  referrerPolicy="no-referrer"
-                                />
-                              </div>
-                            ) : (
-                              <div className="w-16 h-16 sm:w-20 sm:h-20 print:w-[20mm] print:h-[20mm]"></div>
-                            )}
-                            <div className="flex flex-col text-left">
-                              <p className="font-bold underline whitespace-nowrap">({pDetail?.nama})</p>
-                              <p className="text-[10px] uppercase whitespace-nowrap">{isPNS ? 'NIP' : 'NI PPPK'}. {pDetail?.nip}</p>
+                        <div className="flex flex-col items-center justify-center p-2 text-center flex-1 min-h-[110px]">
+                          <p className="whitespace-nowrap">Hormat saya,</p>
+                          {showQRPemohon ? (
+                            <div className="my-1 flex items-center justify-center shrink-0">
+                              <img
+                                src={pDetail?.qrCodeUrl || `https://api.qrserver.com/v1/create-qr-code/?size=250x250&ecc=L&margin=0&data=${encodeURIComponent(`SIP-CUTI SETDA DEMAK - VERIFIKASI PEMOHON\nID: ${selectedPrint.id}\nNama: ${pDetail?.nama || ''}\nNIP: ${pDetail?.nip || ''}\nStatus: TTE Pemohon`)}`}
+                                alt="QR Code TTE Pemohon"
+                                className="w-18 h-18 sm:w-20 sm:h-20 print:w-20 print:h-20 object-contain"
+                                referrerPolicy="no-referrer"
+                              />
                             </div>
-                          </div>
+                          ) : (
+                            <div className="signature-space"></div>
+                          )}
+                          <p className="font-bold underline text-center whitespace-nowrap">({pDetail?.nama})</p>
+                          <p className="text-center uppercase whitespace-nowrap">{isPNS ? 'NIP' : 'NI PPPK'}. {pDetail?.nip}</p>
                         </div>
                       </div>
                     </div>
@@ -528,27 +538,25 @@ export default function CetakCutiView({ pengajuan, pegawai, jenisCuti, sisaCuti,
                     </div>
                     <div className="grid grid-cols-12">
                       <div className="col-span-6 border-r-[0.5px] border-black"></div>
-                      <div className="col-span-6 p-2 flex flex-col items-center justify-center min-h-[110px]">
-                        <p className="font-bold text-center w-full leading-tight">
+                      <div className="col-span-6 p-2 flex flex-col items-center justify-center text-center min-h-[110px]">
+                        <p className="font-bold text-center leading-tight">
                           {getPegawaiDetail(selectedPrint.atasanId)?.jabatan}
                         </p>
-                        <div className="flex items-center justify-center gap-1 mt-1">
-                          {showQRAtasan ? (
-                            <div className="shrink-0">
-                              <img
-                                src={getPegawaiDetail(selectedPrint.atasanId)?.qrCodeUrl || `https://api.qrserver.com/v1/create-qr-code/?size=250x250&ecc=L&margin=1&data=${encodeURIComponent(`SIP-CUTI SETDA DEMAK - PERTIMBANGAN ATASAN LANGSUNG\nID: ${selectedPrint.id}\nNama Atasan: ${getPegawaiNama(selectedPrint.atasanId)}\nNIP: ${getPegawaiNip(selectedPrint.atasanId)}\nStatus: TTE Atasan`)}`}
-                                alt="QR Code TTE Atasan"
-                                className="w-16 h-16 sm:w-20 sm:h-20 print:w-[20mm] print:h-[20mm] object-contain"
-                                referrerPolicy="no-referrer"
-                              />
-                            </div>
-                          ) : (
-                            <div className="w-16 h-16 sm:w-20 sm:h-20 print:w-[20mm] print:h-[20mm]"></div>
-                          )}
-                          <div className="flex flex-col text-left">
-                            <p className="font-bold underline whitespace-nowrap">({getPegawaiNama(selectedPrint.atasanId)})</p>
-                            <p className="text-[10px] uppercase whitespace-nowrap">NIP. {getPegawaiNip(selectedPrint.atasanId)}</p>
+                        {showQRAtasan ? (
+                          <div className="my-1 flex items-center justify-center shrink-0">
+                            <img
+                              src={getPegawaiDetail(selectedPrint.atasanId)?.qrCodeUrl || `https://api.qrserver.com/v1/create-qr-code/?size=250x250&ecc=L&margin=0&data=${encodeURIComponent(`SIP-CUTI SETDA DEMAK - PERTIMBANGAN ATASAN LANGSUNG\nID: ${selectedPrint.id}\nNama Atasan: ${getPegawaiNama(selectedPrint.atasanId)}\nNIP: ${getPegawaiNip(selectedPrint.atasanId)}\nStatus: TTE Atasan`)}`}
+                              alt="QR Code TTE Atasan"
+                              className="w-18 h-18 sm:w-20 sm:h-20 print:w-20 print:h-20 object-contain"
+                              referrerPolicy="no-referrer"
+                            />
                           </div>
+                        ) : (
+                          <div className="signature-space"></div>
+                        )}
+                        <div>
+                          <p className="font-bold underline text-center whitespace-nowrap">({getPegawaiNama(selectedPrint.atasanId)})</p>
+                          <p className="text-center uppercase whitespace-nowrap">NIP. {getPegawaiNip(selectedPrint.atasanId)}</p>
                         </div>
                       </div>
                     </div>
@@ -570,35 +578,33 @@ export default function CetakCutiView({ pengajuan, pegawai, jenisCuti, sisaCuti,
                       <div className="p-1"></div>
                     </div>
                     <div className="grid grid-cols-12">
-                      <div className="col-span-6 border-r-[0.5px] border-black p-2 flex items-center justify-center min-h-[40mm]">
+                      <div className="col-span-6 border-r-[0.5px] border-black p-2 flex items-center justify-center">
                         <img
                           src={dynamicQrCode}
                           alt="QR Code Verifikasi Dokumen Cuti"
-                          className="w-32 h-32 sm:w-36 sm:h-36 print:w-[35mm] print:h-[35mm] object-contain shrink-0"
+                          className="w-28 h-28 sm:w-36 sm:h-36 print:w-36 print:h-36 object-contain shrink-0"
                           referrerPolicy="no-referrer"
                         />
                       </div>
-                      <div className="col-span-6 p-2 flex flex-col items-center justify-center min-h-[110px]">
-                        <p className="font-bold text-center w-full leading-tight">
+                      <div className="col-span-6 p-2 flex flex-col items-center justify-center text-center min-h-[110px]">
+                        <p className="font-bold text-center leading-tight">
                           {getPegawaiDetail(selectedPrint.pejabatId)?.jabatan}
                         </p>
-                        <div className="flex items-center justify-center gap-1 mt-1">
-                          {showQRPejabat ? (
-                            <div className="shrink-0">
-                              <img
-                                src={getPegawaiDetail(selectedPrint.pejabatId)?.qrCodeUrl || `https://api.qrserver.com/v1/create-qr-code/?size=250x250&ecc=L&margin=1&data=${encodeURIComponent(`SIP-CUTI SETDA DEMAK - KEPUTUSAN PEJABAT YANG BERWENANG\nID: ${selectedPrint.id}\nNama Pejabat: ${getPegawaiNama(selectedPrint.pejabatId)}\nNIP: ${getPegawaiNip(selectedPrint.pejabatId)}\nStatus: TTE Pejabat`)}`}
-                                alt="QR Code TTE Pejabat"
-                                className="w-16 h-16 sm:w-20 sm:h-20 print:w-[20mm] print:h-[20mm] object-contain"
-                                referrerPolicy="no-referrer"
-                              />
-                            </div>
-                          ) : (
-                            <div className="w-16 h-16 sm:w-20 sm:h-20 print:w-[20mm] print:h-[20mm]"></div>
-                          )}
-                          <div className="flex flex-col text-left">
-                            <p className="font-bold underline whitespace-nowrap">({getPegawaiNama(selectedPrint.pejabatId)})</p>
-                            <p className="text-[10px] uppercase whitespace-nowrap">NIP. {getPegawaiNip(selectedPrint.pejabatId)}</p>
+                        {showQRPejabat ? (
+                          <div className="my-1 flex items-center justify-center shrink-0">
+                            <img
+                              src={getPegawaiDetail(selectedPrint.pejabatId)?.qrCodeUrl || `https://api.qrserver.com/v1/create-qr-code/?size=250x250&ecc=L&margin=0&data=${encodeURIComponent(`SIP-CUTI SETDA DEMAK - KEPUTUSAN PEJABAT YANG BERWENANG\nID: ${selectedPrint.id}\nNama Pejabat: ${getPegawaiNama(selectedPrint.pejabatId)}\nNIP: ${getPegawaiNip(selectedPrint.pejabatId)}\nStatus: TTE Pejabat`)}`}
+                              alt="QR Code TTE Pejabat"
+                              className="w-18 h-18 sm:w-20 sm:h-20 print:w-20 print:h-20 object-contain"
+                              referrerPolicy="no-referrer"
+                            />
                           </div>
+                        ) : (
+                          <div className="signature-space"></div>
+                        )}
+                        <div>
+                          <p className="font-bold underline text-center whitespace-nowrap">({getPegawaiNama(selectedPrint.pejabatId)})</p>
+                          <p className="text-center uppercase whitespace-nowrap">NIP. {getPegawaiNip(selectedPrint.pejabatId)}</p>
                         </div>
                       </div>
                     </div>
