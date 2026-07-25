@@ -185,29 +185,8 @@ export default function CetakCutiView({ pengajuan, pegawai, jenisCuti, sisaCuti,
         const isHariKalender = namaCutiLower.includes('sakit') || namaCutiLower.includes('melahirkan') || namaCutiLower.includes('besar');
         const durasiText = `${selectedPrint.jumlahHari} Hari ${isHariKalender ? 'Kalender' : 'Kerja'}`;
         
-        // Parameter URL QR Code yang sudah diringkas (id & jabatan dihilangkan)
-        const paramsObj: Record<string, string> = {
-          no: selectedPrint.nomorSurat || '',
-          nm: pDetail?.nama || '',
-          nip: pDetail?.nip || '',
-          cat: jcSelected?.nama || 'Cuti Tahunan',
-          dur: durasiText,
-          m: selectedPrint.tanggalMulai || '',
-          s: selectedPrint.tanggalSelesai || '',
-          als: selectedPrint.alasan || '',
-          tlp: selectedPrint.noTelpHubungi || pDetail?.noHp || '',
-          alm: selectedPrint.alamatSelamaCuti || ''
-        };
-        
-        // Filter parameter kosong agar URL lebih pendek dan mudah di-scan
-        Object.keys(paramsObj).forEach(key => {
-          if (!paramsObj[key]) delete paramsObj[key];
-        });
-
-        const queryParams = new URLSearchParams(paramsObj).toString();
-
         const appOrigin = typeof window !== 'undefined' && window.location.origin ? window.location.origin : 'https://sip-cuti.vercel.app';
-        const verificationUrl = `${appOrigin}/verifikasi?${queryParams}`;
+        const verificationUrl = `${appOrigin}/verifikasi/${encodeURIComponent(selectedPrint.id)}`;
         const dynamicQrCode = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&ecc=L&margin=1&data=${encodeURIComponent(verificationUrl)}`;
 
         return (
