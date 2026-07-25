@@ -31,6 +31,7 @@ import { useToast } from '../lib/ToastContext';
 import Pagination from './Pagination';
 import SearchableSelect from './SearchableSelect';
 import { supabase } from '../lib/supabase';
+import { filterPengajuanByRole } from '../lib/pengajuanFilters';
 
 interface PengajuanCutiViewProps {
   pengajuan: PengajuanCuti[];
@@ -203,51 +204,25 @@ export default function PengajuanCutiView({
   const [activeStageTab, setActiveStageTab] = useState<'semua' | 'verifikator' | 'atasan' | 'pejabat' | 'disetujui' | 'ditolak'>('semua');
 
   useEffect(() => {
-    if (currentUser?.role === 'Atasan') {
-      setActiveStageTab('atasan');
-    } else if (currentUser?.role === 'Pejabat') {
-      setActiveStageTab('pejabat');
-    } else if (currentUser?.role === 'Verifikator') {
-      setActiveStageTab('verifikator');
+    if (isApprovalPage) {
+      if (currentUser?.role === 'Atasan') {
+        setActiveStageTab('atasan');
+      } else if (currentUser?.role === 'Pejabat') {
+        setActiveStageTab('pejabat');
+      } else if (currentUser?.role === 'Verifikator') {
+        setActiveStageTab('verifikator');
+      } else {
+        setActiveStageTab('semua');
+      }
+    } else {
+      setActiveStageTab('semua');
     }
   }, [currentUser, isApprovalPage]);
 
-  // Filter pengajuan berdasarkan hak akses akun:
-  // - Admin, Verifikator, Operator: melihat seluruh data pengajuan
-  // - Atasan: HANYA melihat pengajuan yang menunjuk dirinya sebagai Atasan Langsung (atasanId)
-  // - Pejabat: HANYA melihat pengajuan yang menunjuk dirinya sebagai Pejabat Berwenang (pejabatId)
-  // - Pegawai: melihat pengajuan miliknya sendiri ATAU pengajuan yang menunjuk dirinya sebagai atasan/pejabat
+  // Filter pengajuan berdasarkan Role & Halaman (Tabel Pengajuan Cuti vs Tabel Persetujuan Cuti)
   const userPengajuan = useMemo(() => {
-    if (!currentUser) return pengajuan;
-
-    if (currentUser.role === 'Admin' || currentUser.role === 'Verifikator' || currentUser.role === 'Operator') {
-      return pengajuan;
-    }
-
-    if (currentUser.role === 'Atasan') {
-      if (currentUser.pegawaiId) {
-        return pengajuan.filter(pj => pj.atasanId === currentUser.pegawaiId);
-      }
-      return pengajuan;
-    }
-
-    if (currentUser.role === 'Pejabat') {
-      if (currentUser.pegawaiId) {
-        return pengajuan.filter(pj => pj.pejabatId === currentUser.pegawaiId);
-      }
-      return pengajuan;
-    }
-
-    if (currentUser.pegawaiId) {
-      return pengajuan.filter(pj => 
-        pj.pegawaiId === currentUser.pegawaiId ||
-        pj.atasanId === currentUser.pegawaiId ||
-        pj.pejabatId === currentUser.pegawaiId
-      );
-    }
-
-    return pengajuan;
-  }, [pengajuan, currentUser]);
+    return filterPengajuanByRole(pengajuan, currentUser, isApprovalPage);
+  }, [pengajuan, currentUser, isApprovalPage]);
 
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
@@ -261,16 +236,17 @@ export default function PengajuanCutiView({
     if (!matchesSearch) return false;
 
     // Filter Berdasarkan Tab Alur Approval
+    const st = (pj.status || '').toUpperCase();
     if (activeStageTab === 'verifikator') {
-      if (pj.status !== 'Menunggu' && pj.status !== 'Sudah Diperbaiki' && pj.status !== 'Dalam Perbaikan') return false;
+      if (st !== 'MENUNGGU' && st !== 'SUDAH DIPERBAIKI' && st !== 'DALAM PERBAIKAN' && st !== 'PROSES_VERIFIKATOR' && st !== 'PERBAIKAN') return false;
     } else if (activeStageTab === 'atasan') {
-      if (pj.status !== 'Menunggu Atasan') return false;
+      if (st !== 'MENUNGGU ATASAN' && st !== 'PROSES_ATASAN' && st !== 'DISETUJUI VERIFIKATOR') return false;
     } else if (activeStageTab === 'pejabat') {
-      if (pj.status !== 'Menunggu Pejabat') return false;
+      if (st !== 'MENUNGGU PEJABAT' && st !== 'PROSES_PEJABAT' && st !== 'DISETUJUI ATASAN') return false;
     } else if (activeStageTab === 'disetujui') {
-      if (pj.status !== 'Disetujui') return false;
+      if (st !== 'DISETUJUI') return false;
     } else if (activeStageTab === 'ditolak') {
-      if (pj.status !== 'Ditolak' && pj.status !== 'Dalam Perbaikan') return false;
+      if (st !== 'DITOLAK' && st !== 'DALAM PERBAIKAN' && st !== 'PERBAIKAN') return false;
     }
 
     return true;
@@ -781,7 +757,10 @@ export default function PengajuanCutiView({
             >
               <span>1. Verifikator</span>
               <span className="px-1.5 py-0.2 bg-amber-100 text-amber-800 rounded-full text-[10px] font-mono">
-                {userPengajuan.filter(p => p.status === 'Menunggu' || p.status === 'Sudah Diperbaiki' || p.status === 'Dalam Perbaikan').length}
+                {userPengajuan.filter(p => {
+                  const s = (p.status || '').toUpperCase();
+                  return s === 'MENUNGGU' || s === 'SUDAH DIPERBAIKI' || s === 'DALAM PERBAIKAN' || s === 'PROSES_VERIFIKATOR' || s === 'PERBAIKAN';
+                }).length}
               </span>
             </button>
           )}
@@ -798,7 +777,10 @@ export default function PengajuanCutiView({
             >
               <span>2. TTE Atasan Langsung</span>
               <span className="px-1.5 py-0.2 bg-blue-100 text-blue-800 rounded-full text-[10px] font-mono">
-                {userPengajuan.filter(p => p.status === 'Menunggu Atasan').length}
+                {userPengajuan.filter(p => {
+                  const s = (p.status || '').toUpperCase();
+                  return s === 'MENUNGGU ATASAN' || s === 'PROSES_ATASAN' || s === 'DISETUJUI VERIFIKATOR';
+                }).length}
               </span>
             </button>
           )}
@@ -815,7 +797,10 @@ export default function PengajuanCutiView({
             >
               <span>3. TTE Pejabat Final</span>
               <span className="px-1.5 py-0.2 bg-purple-100 text-purple-800 rounded-full text-[10px] font-mono">
-                {userPengajuan.filter(p => p.status === 'Menunggu Pejabat').length}
+                {userPengajuan.filter(p => {
+                  const s = (p.status || '').toUpperCase();
+                  return s === 'MENUNGGU PEJABAT' || s === 'PROSES_PEJABAT' || s === 'DISETUJUI ATASAN';
+                }).length}
               </span>
             </button>
           )}
@@ -830,7 +815,7 @@ export default function PengajuanCutiView({
           >
             <span>Disetujui (Siap Cetak)</span>
             <span className="px-1.5 py-0.2 bg-teal-100 text-teal-800 rounded-full text-[10px] font-mono">
-              {userPengajuan.filter(p => p.status === 'Disetujui').length}
+              {userPengajuan.filter(p => (p.status || '').toUpperCase() === 'DISETUJUI').length}
             </span>
           </button>
           <button
@@ -843,7 +828,10 @@ export default function PengajuanCutiView({
           >
             <span>Ditolak / Revisi</span>
             <span className="px-1.5 py-0.2 bg-rose-100 text-rose-800 rounded-full text-[10px] font-mono">
-              {userPengajuan.filter(p => p.status === 'Ditolak' || p.status === 'Dalam Perbaikan').length}
+              {userPengajuan.filter(p => {
+                const s = (p.status || '').toUpperCase();
+                return s === 'DITOLAK' || s === 'DALAM PERBAIKAN' || s === 'PERBAIKAN';
+              }).length}
             </span>
           </button>
         </div>
