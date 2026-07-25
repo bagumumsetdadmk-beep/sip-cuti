@@ -30,6 +30,24 @@ export default function VerifikasiPage({ routeId }: { routeId?: string } = {}) {
 
   useEffect(() => {
     setMounted(true);
+
+    if (typeof document !== 'undefined') {
+      const selectors = ["link[rel='icon']", "link[rel='shortcut icon']", "link[rel='apple-touch-icon']"];
+      let updated = false;
+      selectors.forEach(selector => {
+        const link: HTMLLinkElement | null = document.querySelector(selector);
+        if (link) {
+          link.href = '/assets/logo-demak.png';
+          updated = true;
+        }
+      });
+      if (!updated) {
+        const link = document.createElement('link');
+        link.rel = 'icon';
+        link.href = '/assets/logo-demak.png';
+        document.getElementsByTagName('head')[0].appendChild(link);
+      }
+    }
   }, []);
 
   // Parse URL Parameters
