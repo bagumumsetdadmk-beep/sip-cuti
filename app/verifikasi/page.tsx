@@ -10,6 +10,7 @@ export default function VerifikasiPage({ routeId }: { routeId?: string } = {}) {
   const [showFullBKN, setShowFullBKN] = useState(false);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
   }, []);
 
