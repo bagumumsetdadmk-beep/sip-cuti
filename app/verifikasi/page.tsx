@@ -35,6 +35,8 @@ export default function VerifikasiPage({ routeId }: { routeId?: string } = {}) {
   const paramAlasan = getParam('als') || getParam('alasan');
   const paramTelp = getParam('tlp') || getParam('telp');
   const paramAlamat = getParam('alm') || getParam('alamat');
+  const paramAtasan = getParam('at');
+  const paramPejabat = getParam('pj');
 
   // Load from local storage if available
   const [pegawaiList] = useState<Pegawai[]>(() => {
@@ -113,6 +115,8 @@ export default function VerifikasiPage({ routeId }: { routeId?: string } = {}) {
   let alamatCuti = '';
   let statusPengajuan = 'Disetujui';
   let isPNS = true;
+  let atasanNama = '-';
+  let pejabatNama = '-';
 
   if (foundPengajuan) {
     // Priority 1: Record found in local storage / database
@@ -135,6 +139,11 @@ export default function VerifikasiPage({ routeId }: { routeId?: string } = {}) {
     alamatCuti = foundPengajuan.alamatSelamaCuti || paramAlamat || '-';
     statusPengajuan = foundPengajuan.status || 'Disetujui';
     isPNS = pDetail ? pDetail.statusPegawai === 'PNS' : !paramNip.toUpperCase().includes('PPPK');
+    
+    const atasan = pegawaiList.find(p => p.id === foundPengajuan?.atasanId);
+    const pejabat = pegawaiList.find(p => p.id === foundPengajuan?.pejabatId);
+    atasanNama = atasan?.nama || paramAtasan || '-';
+    pejabatNama = pejabat?.nama || paramPejabat || '-';
   } else if (hasQueryParams) {
     // Priority 2: Parameters embedded in URL query parameters
     pemohonNama = paramNama || 'NAMA PEGAWAI';
@@ -149,6 +158,8 @@ export default function VerifikasiPage({ routeId }: { routeId?: string } = {}) {
     alamatCuti = paramAlamat || '-';
     statusPengajuan = 'Disetujui';
     isPNS = !paramNip.toUpperCase().includes('NI PPPK') && !paramNip.toUpperCase().includes('PPPK');
+    atasanNama = paramAtasan || '-';
+    pejabatNama = paramPejabat || '-';
   } else if (pengajuanList.length > 0) {
     // Ultimate fallback if nothing specified
     const activeP = pengajuanList.find(p => p.status === 'Disetujui') || pengajuanList[0];
@@ -169,6 +180,11 @@ export default function VerifikasiPage({ routeId }: { routeId?: string } = {}) {
     alamatCuti = activeP.alamatSelamaCuti || 'botorejo demak';
     statusPengajuan = activeP.status || 'Disetujui';
     isPNS = pDetail?.statusPegawai === 'PNS';
+    
+    const atasan = pegawaiList.find(p => p.id === activeP.atasanId);
+    const pejabat = pegawaiList.find(p => p.id === activeP.pejabatId);
+    atasanNama = atasan?.nama || '-';
+    pejabatNama = pejabat?.nama || '-';
   }
 
   // Calculate initials for avatar
@@ -320,6 +336,50 @@ export default function VerifikasiPage({ routeId }: { routeId?: string } = {}) {
                 </span>
                 <span className="text-slate-900 font-semibold text-xs sm:text-sm mt-1 block capitalize">
                   {alamatCuti}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* SECTION 3: STATUS PERSETUJUAN */}
+        <div className="space-y-3">
+          <div className="text-[10px] sm:text-[11px] font-bold text-slate-400 tracking-wider uppercase flex items-center gap-1.5">
+            <FileCheck className="w-3.5 h-3.5 text-slate-400" />
+            <span>STATUS PERSETUJUAN</span>
+          </div>
+
+          <div className="bg-slate-50/80 border border-slate-100 rounded-2xl p-4 space-y-4">
+            <div className="flex items-start gap-3">
+              <div className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
+                <CheckCircle2 className="w-4 h-4" />
+              </div>
+              <div>
+                <span className="text-[10px] font-bold text-slate-400 tracking-wider uppercase block">
+                  PERTIMBANGAN ATASAN LANGSUNG
+                </span>
+                <span className="text-slate-900 font-bold text-sm mt-0.5 block truncate">
+                  {atasanNama}
+                </span>
+                <span className="text-emerald-700 font-bold text-xs mt-0.5 block">
+                  Disetujui
+                </span>
+              </div>
+            </div>
+
+            <div className="border-t border-slate-200/60 pt-3 flex items-start gap-3">
+              <div className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
+                <CheckCircle2 className="w-4 h-4" />
+              </div>
+              <div>
+                <span className="text-[10px] font-bold text-slate-400 tracking-wider uppercase block">
+                  KEPUTUSAN PEJABAT YANG BERWENANG
+                </span>
+                <span className="text-slate-900 font-bold text-sm mt-0.5 block truncate">
+                  {pejabatNama}
+                </span>
+                <span className="text-emerald-700 font-bold text-xs mt-0.5 block">
+                  Disetujui
                 </span>
               </div>
             </div>
