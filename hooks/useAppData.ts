@@ -75,7 +75,11 @@ const mapPengajuan = (p: any): PengajuanCuti => ({
   ttdDigitalPemohon: p.ttd_digital_pemohon !== undefined ? p.ttd_digital_pemohon : true,
   ttdDigitalAtasan: p.ttd_digital_atasan !== undefined ? p.ttd_digital_atasan : true,
   ttdDigitalPejabat: p.ttd_digital_pejabat !== undefined ? p.ttd_digital_pejabat : true,
-  metodePenandatanganan: p.metode_penandatanganan || ((p.ttd_digital_atasan !== false && p.ttd_digital_pejabat !== false) ? 'TTE' : 'MANUAL')
+  metodePenandatanganan: p.metode_penandatanganan || (
+    (p.ttd_digital_pemohon !== false && p.ttd_digital_atasan === false && p.ttd_digital_pejabat === false)
+      ? 'HYBRID'
+      : ((p.ttd_digital_atasan !== false && p.ttd_digital_pejabat !== false) ? 'TTE' : 'MANUAL')
+  )
 });
 
 export function useAppData() {
@@ -473,6 +477,11 @@ export function useAppData() {
     const ttdPemohon = p.ttdDigitalPemohon !== undefined ? p.ttdDigitalPemohon : true;
     const ttdAtasan = p.ttdDigitalAtasan !== undefined ? p.ttdDigitalAtasan : true;
     const ttdPejabat = p.ttdDigitalPejabat !== undefined ? p.ttdDigitalPejabat : true;
+    const metodeTtd = p.metodePenandatanganan || (
+      (ttdPemohon && !ttdAtasan && !ttdPejabat)
+        ? 'HYBRID'
+        : ((ttdAtasan && ttdPejabat) ? 'TTE' : 'MANUAL')
+    );
 
     const payload: any = {
       pegawai_id: p.pegawaiId,
@@ -492,7 +501,7 @@ export function useAppData() {
       ttd_digital_pemohon: ttdPemohon,
       ttd_digital_atasan: ttdAtasan,
       ttd_digital_pejabat: ttdPejabat,
-      metode_penandatanganan: (ttdAtasan && ttdPejabat) ? 'TTE' : 'MANUAL'
+      metode_penandatanganan: metodeTtd
     };
 
     let { data, error } = await supabase.from('pengajuan_cuti').insert(payload).select().single();
@@ -510,7 +519,7 @@ export function useAppData() {
           ttd_digital_pemohon: ttdPemohon,
           ttd_digital_atasan: ttdAtasan,
           ttd_digital_pejabat: ttdPejabat,
-          metode_penandatanganan: (ttdAtasan && ttdPejabat) ? 'TTE' : 'MANUAL'
+          metode_penandatanganan: metodeTtd
         };
         error = null;
       }
@@ -521,7 +530,7 @@ export function useAppData() {
       newPj.ttdDigitalPemohon = ttdPemohon;
       newPj.ttdDigitalAtasan = ttdAtasan;
       newPj.ttdDigitalPejabat = ttdPejabat;
-      newPj.metodePenandatanganan = (ttdAtasan && ttdPejabat) ? 'TTE' : 'MANUAL';
+      newPj.metodePenandatanganan = metodeTtd;
       setPengajuan([newPj, ...pengajuan]);
       return newPj;
     }
@@ -550,8 +559,12 @@ export function useAppData() {
     if (p.ttdDigitalPemohon !== undefined) payload.ttd_digital_pemohon = p.ttdDigitalPemohon;
     if (p.ttdDigitalAtasan !== undefined) payload.ttd_digital_atasan = p.ttdDigitalAtasan;
     if (p.ttdDigitalPejabat !== undefined) payload.ttd_digital_pejabat = p.ttdDigitalPejabat;
-    if (p.ttdDigitalAtasan !== undefined || p.ttdDigitalPejabat !== undefined) {
-      payload.metode_penandatanganan = (p.ttdDigitalAtasan && p.ttdDigitalPejabat) ? 'TTE' : 'MANUAL';
+    if (p.metodePenandatanganan !== undefined) {
+      payload.metode_penandatanganan = p.metodePenandatanganan;
+    } else if (p.ttdDigitalAtasan !== undefined || p.ttdDigitalPejabat !== undefined) {
+      payload.metode_penandatanganan = (p.ttdDigitalPemohon !== false && p.ttdDigitalAtasan === false && p.ttdDigitalPejabat === false)
+        ? 'HYBRID'
+        : ((p.ttdDigitalAtasan && p.ttdDigitalPejabat) ? 'TTE' : 'MANUAL');
     }
 
     let { data, error } = await supabase.from('pengajuan_cuti').update(payload).eq('id', id).select().single();
@@ -582,8 +595,12 @@ export function useAppData() {
       if (p.ttdDigitalPemohon !== undefined) mapped.ttdDigitalPemohon = p.ttdDigitalPemohon;
       if (p.ttdDigitalAtasan !== undefined) mapped.ttdDigitalAtasan = p.ttdDigitalAtasan;
       if (p.ttdDigitalPejabat !== undefined) mapped.ttdDigitalPejabat = p.ttdDigitalPejabat;
-      if (p.ttdDigitalAtasan !== undefined || p.ttdDigitalPejabat !== undefined) {
-        mapped.metodePenandatanganan = (mapped.ttdDigitalAtasan && mapped.ttdDigitalPejabat) ? 'TTE' : 'MANUAL';
+      if (p.metodePenandatanganan !== undefined) {
+        mapped.metodePenandatanganan = p.metodePenandatanganan;
+      } else if (p.ttdDigitalAtasan !== undefined || p.ttdDigitalPejabat !== undefined) {
+        mapped.metodePenandatanganan = (mapped.ttdDigitalPemohon !== false && mapped.ttdDigitalAtasan === false && mapped.ttdDigitalPejabat === false)
+          ? 'HYBRID'
+          : ((mapped.ttdDigitalAtasan && mapped.ttdDigitalPejabat) ? 'TTE' : 'MANUAL');
       }
       setPengajuan(pengajuan.map(item => item.id === id ? mapped : item));
     } else {

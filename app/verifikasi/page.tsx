@@ -29,7 +29,7 @@ export default function VerifikasiPage({ routeId }: { routeId?: string } = {}) {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    setMounted(true);
+    const timer = setTimeout(() => setMounted(true), 0);
 
     if (typeof document !== 'undefined') {
       const selectors = ["link[rel='icon']", "link[rel='shortcut icon']", "link[rel='apple-touch-icon']"];
@@ -48,6 +48,8 @@ export default function VerifikasiPage({ routeId }: { routeId?: string } = {}) {
         document.getElementsByTagName('head')[0].appendChild(link);
       }
     }
+
+    return () => clearTimeout(timer);
   }, []);
 
   // Parse URL Parameters

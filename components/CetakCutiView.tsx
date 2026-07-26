@@ -177,8 +177,15 @@ export default function CetakCutiView({ pengajuan, pegawai, jenisCuti, sisaCuti,
         const namaCutiLower = jcSelected?.nama.toLowerCase() || '';
 
         // Tanda Tangan Elektronik / QR Code otomatis berdasarkan ketentuan pengajuan cuti
-        const isTTEFull = selectedPrint.metodePenandatanganan === 'TTE' || (selectedPrint.ttdDigitalAtasan !== false && selectedPrint.ttdDigitalPejabat !== false);
-        const showQRPemohon = isTTEFull && selectedPrint.ttdDigitalPemohon !== false;
+        const metode = selectedPrint.metodePenandatanganan || (
+          (selectedPrint.ttdDigitalPemohon !== false && selectedPrint.ttdDigitalAtasan === false && selectedPrint.ttdDigitalPejabat === false)
+            ? 'HYBRID'
+            : ((selectedPrint.ttdDigitalAtasan !== false && selectedPrint.ttdDigitalPejabat !== false) ? 'TTE' : 'MANUAL')
+        );
+
+        const isTTEFull = metode === 'TTE';
+        const isHybrid = metode === 'HYBRID';
+        const showQRPemohon = (isTTEFull || isHybrid) && selectedPrint.ttdDigitalPemohon !== false;
         const showQRAtasan = isTTEFull && selectedPrint.ttdDigitalAtasan !== false;
         const showQRPejabat = isTTEFull && selectedPrint.ttdDigitalPejabat !== false;
 
@@ -235,6 +242,11 @@ export default function CetakCutiView({ pengajuan, pegawai, jenisCuti, sisaCuti,
                         <span className="w-2 h-2 rounded-full bg-blue-400 animate-pulse"></span>
                         FULL TTE QR CODE
                       </span>
+                    ) : isHybrid ? (
+                      <span className="px-2.5 py-0.5 bg-purple-500/20 text-purple-300 border border-purple-400/40 rounded-md font-bold flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-purple-400 animate-pulse"></span>
+                        HYBRID (QR PEMOHON + TTD BASAH ATASAN/PEJABAT)
+                      </span>
                     ) : (
                       <span className="px-2.5 py-0.5 bg-amber-500/20 text-amber-300 border border-amber-400/40 rounded-md font-bold flex items-center gap-1.5">
                         <span className="w-2 h-2 rounded-full bg-amber-400"></span>
@@ -243,7 +255,11 @@ export default function CetakCutiView({ pengajuan, pegawai, jenisCuti, sisaCuti,
                     )}
                   </div>
                   <span className="text-[10px] text-slate-400 italic">
-                    {isTTEFull ? 'QR Code TTE otomatis terbit & aktif pada dokumen.' : 'Formulir dicetak tanpa QR Code untuk tanda tangan fisik.'}
+                    {isTTEFull 
+                      ? 'QR Code TTE otomatis terbit & aktif untuk Pemohon, Atasan, & Pejabat.' 
+                      : isHybrid
+                      ? 'QR Code TTE terbit untuk Pemohon. Atasan & Pejabat menggunakan TTD Basah.'
+                      : 'Formulir dicetak tanpa QR Code untuk tanda tangan fisik.'}
                   </span>
                 </div>
               </div>

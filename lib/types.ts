@@ -63,7 +63,7 @@ export interface PengajuanCuti {
   ttdDigitalPemohon?: boolean;
   ttdDigitalAtasan?: boolean;
   ttdDigitalPejabat?: boolean;
-  metodePenandatanganan?: 'TTE' | 'MANUAL';
+  metodePenandatanganan?: 'TTE' | 'MANUAL' | 'HYBRID';
 }
 
 export interface PengaturanInstansi {

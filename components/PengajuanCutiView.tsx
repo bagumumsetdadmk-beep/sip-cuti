@@ -94,7 +94,7 @@ export default function PengajuanCutiView({
   const [isUploading, setIsUploading] = useState(false);
   const [formAtasanId, setFormAtasanId] = useState('');
   const [formPejabatId, setFormPejabatId] = useState('');
-  const [formMetodeTtd, setFormMetodeTtd] = useState<'TTE' | 'MANUAL'>('TTE');
+  const [formMetodeTtd, setFormMetodeTtd] = useState<'TTE' | 'MANUAL' | 'HYBRID'>('TTE');
   const [formTtdDigitalPemohon, setFormTtdDigitalPemohon] = useState(true);
   const [formTtdDigitalAtasan, setFormTtdDigitalAtasan] = useState(true);
   const [formTtdDigitalPejabat, setFormTtdDigitalPejabat] = useState(true);
@@ -297,11 +297,15 @@ export default function PengajuanCutiView({
     setFormAtasanId(pj.atasanId);
     setFormPejabatId(pj.pejabatId);
     
-    const isManual = pj.metodePenandatanganan === 'MANUAL' || pj.ttdDigitalAtasan === false || pj.ttdDigitalPejabat === false;
-    setFormMetodeTtd(isManual ? 'MANUAL' : 'TTE');
-    setFormTtdDigitalPemohon(!isManual);
-    setFormTtdDigitalAtasan(!isManual);
-    setFormTtdDigitalPejabat(!isManual);
+    const metode = pj.metodePenandatanganan || (
+      pj.ttdDigitalPemohon !== false && pj.ttdDigitalAtasan === false && pj.ttdDigitalPejabat === false
+        ? 'HYBRID'
+        : (pj.ttdDigitalAtasan === false && pj.ttdDigitalPejabat === false ? 'MANUAL' : 'TTE')
+    );
+    setFormMetodeTtd(metode);
+    setFormTtdDigitalPemohon(metode === 'TTE' || metode === 'HYBRID');
+    setFormTtdDigitalAtasan(metode === 'TTE');
+    setFormTtdDigitalPejabat(metode === 'TTE');
     setShowFormModal(true);
   };
 
@@ -384,7 +388,7 @@ export default function PengajuanCutiView({
         pejabatId: formPejabatId,
         nomorSurat: formNomorSurat,
         metodePenandatanganan: formMetodeTtd,
-        ttdDigitalPemohon: formMetodeTtd === 'TTE',
+        ttdDigitalPemohon: formMetodeTtd === 'TTE' || formMetodeTtd === 'HYBRID',
         ttdDigitalAtasan: formMetodeTtd === 'TTE',
         ttdDigitalPejabat: formMetodeTtd === 'TTE',
         status: newStatus
@@ -406,7 +410,7 @@ export default function PengajuanCutiView({
         pejabatId: formPejabatId,
         nomorSurat: formNomorSurat,
         metodePenandatanganan: formMetodeTtd,
-        ttdDigitalPemohon: formMetodeTtd === 'TTE',
+        ttdDigitalPemohon: formMetodeTtd === 'TTE' || formMetodeTtd === 'HYBRID',
         ttdDigitalAtasan: formMetodeTtd === 'TTE',
         ttdDigitalPejabat: formMetodeTtd === 'TTE'
       });
@@ -901,7 +905,9 @@ export default function PengajuanCutiView({
                           </span>
                         </div>
                         <div className="text-[9px] font-medium text-slate-500 mt-1">
-                          {pj.ttdDigitalAtasan && pj.ttdDigitalPejabat ? '✨ TTE Full QR' : '✍️ TTD Manual/Basah'}
+                          {pj.metodePenandatanganan === 'HYBRID' || (pj.ttdDigitalPemohon !== false && pj.ttdDigitalAtasan === false && pj.ttdDigitalPejabat === false)
+                            ? '⚡ TTE Hybrid'
+                            : (pj.ttdDigitalAtasan && pj.ttdDigitalPejabat ? '✨ TTE Full QR' : '✍️ TTD Manual/Basah')}
                         </div>
                         {pj.catatanPerbaikan && pj.status === 'Dalam Perbaikan' && (
                           <div className="text-[9px] text-red-500 mt-1 max-w-36 leading-tight mx-auto font-medium">
@@ -1318,7 +1324,7 @@ export default function PengajuanCutiView({
               {/* Ketentuan Metode Penandatanganan */}
               <div className="col-span-2 space-y-2 pt-2 border-t border-gray-100">
                 <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider font-mono">Metode Penandatanganan & Legalisasi Dokumen Cuti</label>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   <label 
                     onClick={() => {
                       setFormMetodeTtd('TTE');
@@ -1345,11 +1351,45 @@ export default function PengajuanCutiView({
                       className="mt-0.5 text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer" 
                     />
                     <div>
-                      <div className="text-xs font-bold flex items-center gap-1.5">
+                      <div className="text-xs font-bold flex items-center gap-1.5 flex-wrap">
                         <span>Full TTE QR Code</span>
                         <span className="px-1.5 py-0.5 bg-blue-600 text-white text-[9px] font-mono rounded font-semibold">Rekomendasi</span>
                       </div>
-                      <p className="text-[11px] text-gray-500 mt-0.5">Menerbitkan QR Code TTE resmi secara otomatis pada lembar cetak untuk Pemohon, Atasan, dan Pejabat.</p>
+                      <p className="text-[11px] text-gray-500 mt-0.5 leading-snug">Menerbitkan QR Code TTE resmi secara otomatis pada lembar cetak untuk Pemohon, Atasan, dan Pejabat.</p>
+                    </div>
+                  </label>
+
+                  <label 
+                    onClick={() => {
+                      setFormMetodeTtd('HYBRID');
+                      setFormTtdDigitalPemohon(true);
+                      setFormTtdDigitalAtasan(false);
+                      setFormTtdDigitalPejabat(false);
+                    }}
+                    className={`p-3 rounded-xl border-2 flex items-start gap-3 cursor-pointer transition-all ${
+                      formMetodeTtd === 'HYBRID' 
+                        ? 'bg-purple-50/70 border-purple-600 text-purple-950 shadow-xs' 
+                        : 'bg-slate-50 border-slate-200 hover:border-slate-300 text-slate-700'
+                    }`}
+                  >
+                    <input 
+                      type="radio" 
+                      name="metodePenandatanganan"
+                      checked={formMetodeTtd === 'HYBRID'} 
+                      onChange={() => {
+                        setFormMetodeTtd('HYBRID');
+                        setFormTtdDigitalPemohon(true);
+                        setFormTtdDigitalAtasan(false);
+                        setFormTtdDigitalPejabat(false);
+                      }}
+                      className="mt-0.5 text-purple-600 focus:ring-purple-500 w-4 h-4 cursor-pointer" 
+                    />
+                    <div>
+                      <div className="text-xs font-bold flex items-center gap-1.5 flex-wrap">
+                        <span>QR Code Pemohon + TTD Basah Atasan/Pejabat</span>
+                        <span className="px-1.5 py-0.5 bg-purple-600 text-white text-[9px] font-mono rounded font-semibold">Hybrid</span>
+                      </div>
+                      <p className="text-[11px] text-gray-500 mt-0.5 leading-snug">QR Code hanya akan diterbitkan untuk Pemohon. Kolom Atasan dan Pejabat dikosongkan untuk tanda tangan basah/fisik.</p>
                     </div>
                   </label>
 
@@ -1380,7 +1420,7 @@ export default function PengajuanCutiView({
                     />
                     <div>
                       <div className="text-xs font-bold">TTD Manual / Basah</div>
-                      <p className="text-[11px] text-gray-500 mt-0.5">Mencetak formulir tanpa QR Code untuk ditandatangani secara fisik / basah oleh pejabat terkait.</p>
+                      <p className="text-[11px] text-gray-500 mt-0.5 leading-snug">Mencetak formulir tanpa QR Code untuk ditandatangani secara fisik / basah oleh pejabat terkait.</p>
                     </div>
                   </label>
                 </div>
@@ -1447,9 +1487,15 @@ export default function PengajuanCutiView({
                   <div className="flex items-center justify-between">
                     <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider font-mono">Posisi Tahap Approval:</span>
                     <span className="text-[10px] font-bold text-slate-600 font-mono">
-                      Metode: <strong className={selectedPj.ttdDigitalAtasan && selectedPj.ttdDigitalPejabat ? 'text-blue-700' : 'text-slate-800'}>
-                        {selectedPj.ttdDigitalAtasan && selectedPj.ttdDigitalPejabat ? 'FULL TTE QR CODE' : 'TTD MANUAL / BASAH'}
-                      </strong>
+                      Metode: {(() => {
+                        const isHybrid = selectedPj.metodePenandatanganan === 'HYBRID' || (selectedPj.ttdDigitalPemohon !== false && selectedPj.ttdDigitalAtasan === false && selectedPj.ttdDigitalPejabat === false);
+                        const isTTEFull = selectedPj.metodePenandatanganan === 'TTE' || (!isHybrid && selectedPj.ttdDigitalAtasan !== false && selectedPj.ttdDigitalPejabat !== false);
+                        return (
+                          <strong className={isTTEFull ? 'text-blue-700' : isHybrid ? 'text-purple-700' : 'text-slate-800'}>
+                            {isTTEFull ? 'FULL TTE QR CODE' : isHybrid ? 'HYBRID (QR PEMOHON + TTD BASAH)' : 'TTD MANUAL / BASAH'}
+                          </strong>
+                        );
+                      })()}
                     </span>
                   </div>
                   <div className="grid grid-cols-3 gap-2 text-center text-[10px] font-bold">
