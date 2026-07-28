@@ -1230,7 +1230,7 @@ export default function PengajuanCutiView({
                 </div>
 
                 <div className="col-span-2 md:col-span-1 space-y-1">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider font-mono">Bukti Dukung (PDF/Gambar, Max 2MB)</label>
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider font-mono">Bukti Dukung (PDF/Gambar, Max 500KB)</label>
                   <input
                     type="file"
                     accept=".pdf,.jpg,.jpeg,.png"
@@ -1238,8 +1238,8 @@ export default function PengajuanCutiView({
                     onChange={async (e) => {
                       const file = e.target.files?.[0];
                       if (file) {
-                        if (file.size > 2 * 1024 * 1024) {
-                          showToast('Ukuran file maksimal 2 MB', 'error');
+                        if (file.size > 500 * 1024) {
+                          showToast('Ukuran file maksimal 500 KB', 'error');
                           e.target.value = '';
                           return;
                         }
