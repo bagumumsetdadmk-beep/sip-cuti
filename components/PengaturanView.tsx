@@ -5,6 +5,7 @@ import { Settings, Save, Landmark, Phone, Mail, Globe, UserCheck, AlertCircle } 
 import { PengaturanInstansi } from '../lib/types';
 import { useToast } from '../lib/ToastContext';
 import { supabase } from '../lib/supabase';
+import { getStorageFilePath } from '../lib/utils';
 
 interface PengaturanViewProps {
   instansi: PengaturanInstansi;
@@ -185,6 +186,7 @@ export default function PengaturanView({ instansi, updateInstansi }: PengaturanV
                       }
                       
                       setIsUploading(true);
+                      const oldLogoUrl = logoUrl;
                       try {
                         const fileExt = file.name.split('.').pop();
                         const fileName = `logo_${Date.now()}.${fileExt}`;
@@ -201,6 +203,17 @@ export default function PengaturanView({ instansi, updateInstansi }: PengaturanV
                           
                         setLogoUrl(data.publicUrl);
                         showToast('Logo berhasil diunggah', 'success');
+
+                        if (oldLogoUrl) {
+                          const oldPath = getStorageFilePath(oldLogoUrl);
+                          if (oldPath) {
+                            try {
+                              await supabase.storage.from('berkas_cuti').remove([oldPath]);
+                            } catch (err) {
+                              console.warn('Gagal menghapus logo lama:', err);
+                            }
+                          }
+                        }
                       } catch (error: any) {
                         console.error('Error uploading logo:', error);
                         showToast('Gagal mengunggah logo: ' + error.message, 'error');

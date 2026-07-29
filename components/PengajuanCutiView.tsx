@@ -32,6 +32,7 @@ import Pagination from './Pagination';
 import SearchableSelect from './SearchableSelect';
 import { supabase } from '../lib/supabase';
 import { filterPengajuanByRole } from '../lib/pengajuanFilters';
+import { getStorageFilePath } from '../lib/utils';
 
 interface PengajuanCutiViewProps {
   pengajuan: PengajuanCuti[];
@@ -1245,6 +1246,7 @@ export default function PengajuanCutiView({
                         }
                         
                         setIsUploading(true);
+                        const oldBerkasUrl = formBerkasPendukung;
                         try {
                           const fileExt = file.name.split('.').pop();
                           const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
@@ -1262,6 +1264,18 @@ export default function PengajuanCutiView({
                             
                           setFormBerkasPendukung(data.publicUrl);
                           showToast('Berkas berhasil diunggah', 'success');
+
+                          // Hapus berkas lama dari Supabase storage jika ada
+                          if (oldBerkasUrl) {
+                            const oldPath = getStorageFilePath(oldBerkasUrl);
+                            if (oldPath) {
+                              try {
+                                await supabase.storage.from('berkas_cuti').remove([oldPath]);
+                              } catch (err) {
+                                console.warn('Gagal menghapus file lama dari storage:', err);
+                              }
+                            }
+                          }
                         } catch (error: any) {
                           console.error('Error uploading file:', error);
                           showToast('Gagal mengunggah file: ' + error.message, 'error');
@@ -1274,7 +1288,34 @@ export default function PengajuanCutiView({
                     className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 text-xs text-gray-700 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
                   />
                   {isUploading && <span className="text-[10px] text-blue-600 font-bold animate-pulse">Mengunggah file...</span>}
-                  {formBerkasPendukung && !isUploading && <span className="text-[10px] text-green-600 font-bold">✓ File terpilih dan terunggah</span>}
+                  {formBerkasPendukung && !isUploading && (
+                    <div className="flex items-center justify-between mt-1 text-[11px] bg-emerald-50 border border-emerald-200 rounded-lg px-2.5 py-1.5 shadow-sm">
+                      <span className="text-emerald-700 font-semibold flex items-center gap-1">
+                        ✓ Berkas Terunggah
+                      </span>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          if (confirm('Apakah Anda yakin ingin menghapus berkas bukti dukung ini? File di penyimpanan Supabase akan dihapus permanen.')) {
+                            const oldPath = getStorageFilePath(formBerkasPendukung);
+                            if (oldPath) {
+                              try {
+                                await supabase.storage.from('berkas_cuti').remove([oldPath]);
+                              } catch (err) {
+                                console.warn('Gagal menghapus file dari storage:', err);
+                              }
+                            }
+                            setFormBerkasPendukung('');
+                            showToast('Berkas bukti dukung berhasil dihapus', 'info');
+                          }
+                        }}
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50 font-bold px-2 py-0.5 rounded border border-red-200 transition-colors flex items-center gap-1 shrink-0 ml-2"
+                        title="Hapus berkas dari Supabase Storage"
+                      >
+                        <Trash2 size={12} /> Hapus File
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 {/* 4. ATASAN DAN PEJABAT BERWENANG */}

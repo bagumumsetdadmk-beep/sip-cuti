@@ -4,6 +4,7 @@
 import { useState, useEffect } from 'react';
 import { Pegawai, HariLibur, AtasanPejabat, JenisCuti, SisaCutiTahunan, PengajuanCuti, PengaturanInstansi, PengaturanUser } from '../lib/types';
 import { supabase } from '../lib/supabase';
+import { getStorageFilePath } from '../lib/utils';
 import { initialUsers, defaultPengaturanInstansi, initialPegawai, initialHariLibur, initialAtasanPejabat, initialJenisCuti, initialSisaCutiTahunan, initialPengajuanCuti } from '../lib/initialData';
 
 // Helper mapping functions
@@ -638,6 +639,17 @@ export function useAppData() {
   };
 
   const deletePengajuan = async (id: string) => {
+    const target = pengajuan.find(item => item.id === id);
+    if (target?.berkasPendukung) {
+      const oldPath = getStorageFilePath(target.berkasPendukung);
+      if (oldPath) {
+        try {
+          await supabase.storage.from('berkas_cuti').remove([oldPath]);
+        } catch (e) {
+          console.warn('Gagal menghapus berkas dari storage:', e);
+        }
+      }
+    }
     const { error } = await supabase.from('pengajuan_cuti').delete().eq('id', id);
     if (!error) setPengajuan(pengajuan.filter(item => item.id !== id));
   };
