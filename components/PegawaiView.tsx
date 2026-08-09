@@ -9,8 +9,8 @@ import Pagination from './Pagination';
 
 interface PegawaiViewProps {
   pegawai: Pegawai[];
-  addPegawai: (p: Omit<Pegawai, 'id'>) => void;
-  updatePegawai: (id: string, p: Partial<Pegawai>) => void;
+  addPegawai: (p: Omit<Pegawai, 'id'>) => Promise<{ success: boolean; error?: string }> | void;
+  updatePegawai: (id: string, p: Partial<Pegawai>) => Promise<{ success: boolean; error?: string }> | void;
   deletePegawai: (id: string) => void;
   currentUser?: PengaturanUser | null;
 }
@@ -103,7 +103,7 @@ export default function PegawaiView({ pegawai, addPegawai, updatePegawai, delete
     setShowDeleteConfirm(true);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!nip || !nama || !jabatan || !masaKerja) {
       showToast('Harap isi semua kolom wajib!', 'error');
@@ -112,7 +112,7 @@ export default function PegawaiView({ pegawai, addPegawai, updatePegawai, delete
 
     if (selectedPegawai) {
       // Edit
-      updatePegawai(selectedPegawai.id, {
+      const res = await updatePegawai(selectedPegawai.id, {
         nip,
         nama,
         jabatan,
@@ -124,10 +124,14 @@ export default function PegawaiView({ pegawai, addPegawai, updatePegawai, delete
         noHp: '-',
         qrCodeUrl: qrCodeUrl || undefined
       });
+      if (res && res.success === false) {
+        showToast(res.error || 'Gagal memperbarui data pegawai.', 'error');
+        return;
+      }
       showToast('Data pegawai berhasil diperbarui.', 'success');
     } else {
       // Add
-      addPegawai({
+      const res = await addPegawai({
         nip,
         nama,
         jabatan,
@@ -139,6 +143,10 @@ export default function PegawaiView({ pegawai, addPegawai, updatePegawai, delete
         noHp: '-',
         qrCodeUrl: qrCodeUrl || undefined
       });
+      if (res && res.success === false) {
+        showToast(res.error || 'Gagal menambahkan pegawai.', 'error');
+        return;
+      }
       showToast('Pegawai baru berhasil ditambahkan.', 'success');
     }
     setShowModal(false);
@@ -378,16 +386,26 @@ export default function PegawaiView({ pegawai, addPegawai, updatePegawai, delete
             </div>
 
             <form onSubmit={handleSubmit} className="p-5 space-y-4">
+              {/* Petunjuk Penanganan Plt / Plh */}
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-[11px] text-amber-900 leading-relaxed">
+                <strong>Catatan Tugas Tambahan Plt. / Plh.:</strong>
+                <ul className="list-disc pl-4 mt-1 space-y-0.5">
+                  <li>NIP pada sistem bersifat unik (1 NIP = 1 Pegawai).</li>
+                  <li><strong>Cara Recommended:</strong> Edit jabatan pegawai yang sudah ada, misalnya: <em>Analis Kebijakan / Plt. Kabag Organisasi</em>.</li>
+                  <li><strong>Atau entri terpisah:</strong> Jika ingin membuat entri khusus Plt., tambahkan akhiran pada NIP (contoh: <code>196708211986071001.PLT</code>).</li>
+                </ul>
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2 space-y-1">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider font-mono">NIP Pegawai (18 Digit) *</label>
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider font-mono">NIP Pegawai *</label>
                   <input
                     type="text"
                     required
-                    maxLength={18}
+                    maxLength={30}
                     value={nip}
-                    onChange={(e) => setNip(e.target.value.replace(/\D/g, ''))}
-                    placeholder="Contoh: 1985xxxxxxxxxxxxxx"
+                    onChange={(e) => setNip(e.target.value.replace(/[^\w.-]/g, ''))}
+                    placeholder="Contoh: 196708211986071001 atau 196708211986071001.PLT"
                     className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 text-xs text-gray-700 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-mono"
                   />
                 </div>

@@ -19,10 +19,15 @@ export default function CetakCutiView({ pengajuan, pegawai, jenisCuti, sisaCuti,
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedPrint, setSelectedPrint] = useState<PengajuanCuti | null>(null);
 
+  const cleanNip = (rawNip?: string) => {
+    if (!rawNip) return '';
+    return rawNip.replace(/(\.|\-)(PLT|PLH|plt|plh).*$/i, '');
+  };
+
   const getPegawaiNama = (id: string) => pegawai.find(p => p.id === id)?.nama || '';
   const getPegawaiDetail = (id: string) => pegawai.find(p => p.id === id);
   const getJenisCutiNama = (id: string) => jenisCuti.find(jc => jc.id === id)?.nama || '';
-  const getPegawaiNip = (id: string) => pegawai.find(p => p.id === id)?.nip || '';
+  const getPegawaiNip = (id: string) => cleanNip(pegawai.find(p => p.id === id)?.nip);
 
   const isHariKalender = (jenisCutiId: string) => {
     const selected = jenisCuti.find(jc => jc.id === jenisCutiId);
@@ -517,7 +522,7 @@ export default function CetakCutiView({ pengajuan, pegawai, jenisCuti, sisaCuti,
                             <div className="signature-space"></div>
                           )}
                           <p className="font-bold underline text-center whitespace-nowrap">({pDetail?.nama})</p>
-                          <p className="text-center uppercase whitespace-nowrap">{isPNS ? 'NIP' : 'NI PPPK'}. {pDetail?.nip}</p>
+                          <p className="text-center uppercase whitespace-nowrap">{isPNS ? 'NIP' : 'NI PPPK'}. {cleanNip(pDetail?.nip)}</p>
                         </div>
                       </div>
                     </div>

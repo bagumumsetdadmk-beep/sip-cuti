@@ -236,7 +236,7 @@ export function useAppData() {
   }, [instansi?.logoUrl]);
 
   // == CRUD PEGAWAI ==
-  const addPegawai = async (p: Omit<Pegawai, 'id'>) => {
+  const addPegawai = async (p: Omit<Pegawai, 'id'>): Promise<{ success: boolean; error?: string }> => {
     const payload: any = {
       nip: p.nip,
       nama: p.nama,
@@ -255,7 +255,14 @@ export function useAppData() {
         localStorage.setItem(`pegawai_qr_${data.id}`, p.qrCodeUrl);
       }
       setPegawai([mapPegawai(data), ...pegawai]);
+      return { success: true };
     } else {
+      if (error?.code === '23505') {
+        return { 
+          success: false, 
+          error: `NIP ${p.nip} sudah terdaftar di sistem. Untuk tugas Plt./Plh., Anda dapat mengedit jabatan pegawai yang ada (contoh: Analis / Plt. Kabag) atau menambahkan akhiran pada NIP (contoh: ${p.nip}.PLT).` 
+        };
+      }
       console.error(error);
       // Fallback if column qr_code_url doesn't exist yet in Supabase
       const fallbackPayload = { ...payload };
@@ -268,13 +275,21 @@ export function useAppData() {
         const mapped = mapPegawai(fallbackData);
         if (p.qrCodeUrl) mapped.qrCodeUrl = p.qrCodeUrl;
         setPegawai([mapped, ...pegawai]);
+        return { success: true };
       } else {
+        if (fallbackError?.code === '23505') {
+          return { 
+            success: false, 
+            error: `NIP ${p.nip} sudah terdaftar di sistem. Untuk tugas Plt./Plh., Anda dapat mengedit jabatan pegawai yang ada (contoh: Analis / Plt. Kabag) atau menambahkan akhiran pada NIP (contoh: ${p.nip}.PLT).` 
+          };
+        }
         console.error(fallbackError);
+        return { success: false, error: fallbackError?.message || error?.message || 'Gagal menyimpan pegawai.' };
       }
     }
   };
 
-  const updatePegawai = async (id: string, p: Partial<Pegawai>) => {
+  const updatePegawai = async (id: string, p: Partial<Pegawai>): Promise<{ success: boolean; error?: string }> => {
     const payload: any = {};
     if (p.nip !== undefined) payload.nip = p.nip;
     if (p.nama !== undefined) payload.nama = p.nama;
@@ -297,7 +312,14 @@ export function useAppData() {
         }
       }
       setPegawai(pegawai.map(item => item.id === id ? mapPegawai(data) : item));
+      return { success: true };
     } else {
+      if (error?.code === '23505') {
+        return { 
+          success: false, 
+          error: `NIP ${p.nip} sudah terdaftar di pegawai lain. Silakan periksa kembali atau gunakan akhiran seperti ${p.nip}.PLT.` 
+        };
+      }
       console.error(error);
       // Fallback if column qr_code_url doesn't exist yet in Supabase
       const fallbackPayload = { ...payload };
@@ -314,8 +336,16 @@ export function useAppData() {
         const mapped = mapPegawai(fallbackData);
         if (p.qrCodeUrl) mapped.qrCodeUrl = p.qrCodeUrl;
         setPegawai(pegawai.map(item => item.id === id ? mapped : item));
+        return { success: true };
       } else {
+        if (fallbackError?.code === '23505') {
+          return { 
+            success: false, 
+            error: `NIP ${p.nip} sudah terdaftar di pegawai lain. Silakan periksa kembali atau gunakan akhiran seperti ${p.nip}.PLT.` 
+          };
+        }
         console.error(fallbackError);
+        return { success: false, error: fallbackError?.message || error?.message || 'Gagal memperbarui pegawai.' };
       }
     }
   };
