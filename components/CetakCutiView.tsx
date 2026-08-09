@@ -197,8 +197,8 @@ export default function CetakCutiView({ pengajuan, pegawai, jenisCuti, sisaCuti,
         const dynamicQrCode = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&ecc=L&margin=1&data=${encodeURIComponent(verificationUrl)}`;
 
         return (
-          <div className="fixed inset-0 bg-gray-100 md:bg-black/50 overflow-y-auto z-50 flex items-start justify-center p-0 md:p-6 transition-all">
-            <div className="bg-white w-full max-w-[850px] shadow-2xl border-0 md:border border-gray-300 md:rounded-xl overflow-hidden flex flex-col my-0 md:my-4 print:my-0">
+          <div className="fixed inset-0 bg-gray-100 md:bg-black/50 overflow-y-auto z-50 flex items-start justify-center p-0 md:p-6 transition-all print:static print:inset-auto print:bg-transparent print:p-0 print:m-0 print:overflow-visible">
+            <div className="bg-white w-full max-w-[850px] shadow-2xl border-0 md:border border-gray-300 md:rounded-xl overflow-hidden flex flex-col my-0 md:my-4 print:my-0 print:border-none print:shadow-none print:overflow-visible print:max-w-none print:w-full">
               
               {/* Toolbar Atas (No-print) */}
               <div className="p-4 bg-slate-900 text-white flex flex-col gap-3 no-print shrink-0 border-b border-slate-800">
@@ -502,14 +502,14 @@ export default function CetakCutiView({ pengajuan, pegawai, jenisCuti, sisaCuti,
                         </div>
                         
                         {/* Bottom: Signature of Pemohon with optional QR TTE */}
-                        <div className="flex flex-col items-center justify-center p-2 text-center flex-1 min-h-[90px] print:min-h-[50px]">
+                        <div className="flex flex-col items-center justify-center p-2 text-center flex-1 min-h-[110px]">
                           <p className="whitespace-nowrap">Hormat saya,</p>
                           {showQRPemohon ? (
                             <div className="my-1 flex items-center justify-center shrink-0">
                               <img
                                 src={pDetail?.qrCodeUrl || `https://api.qrserver.com/v1/create-qr-code/?size=250x250&ecc=L&margin=0&data=${encodeURIComponent(`SIP-CUTI SETDA DEMAK - VERIFIKASI PEMOHON\nID: ${selectedPrint.id}\nNama: ${pDetail?.nama || ''}\nNIP: ${pDetail?.nip || ''}\nStatus: TTE Pemohon`)}`}
                                 alt="QR Code TTE Pemohon"
-                                className="w-18 h-18 sm:w-20 sm:h-20 print:w-14 print:h-14 object-contain"
+                                className="w-18 h-18 sm:w-20 sm:h-20 print:w-20 print:h-20 object-contain"
                                 referrerPolicy="no-referrer"
                               />
                             </div>
@@ -540,7 +540,7 @@ export default function CetakCutiView({ pengajuan, pegawai, jenisCuti, sisaCuti,
                     </div>
                     <div className="grid grid-cols-12">
                       <div className="col-span-6 border-r-[0.5px] border-black"></div>
-                      <div className="col-span-6 p-2 flex flex-col items-center justify-center text-center min-h-[90px] print:min-h-[50px]">
+                      <div className="col-span-6 p-2 flex flex-col items-center justify-center text-center min-h-[110px]">
                         <p className="font-bold text-center leading-tight">
                           {getPegawaiDetail(selectedPrint.atasanId)?.jabatan}
                         </p>
@@ -549,7 +549,7 @@ export default function CetakCutiView({ pengajuan, pegawai, jenisCuti, sisaCuti,
                             <img
                               src={getPegawaiDetail(selectedPrint.atasanId)?.qrCodeUrl || `https://api.qrserver.com/v1/create-qr-code/?size=250x250&ecc=L&margin=0&data=${encodeURIComponent(`SIP-CUTI SETDA DEMAK - PERTIMBANGAN ATASAN LANGSUNG\nID: ${selectedPrint.id}\nNama Atasan: ${getPegawaiNama(selectedPrint.atasanId)}\nNIP: ${getPegawaiNip(selectedPrint.atasanId)}\nStatus: TTE Atasan`)}`}
                               alt="QR Code TTE Atasan"
-                              className="w-18 h-18 sm:w-20 sm:h-20 print:w-14 print:h-14 object-contain"
+                              className="w-18 h-18 sm:w-20 sm:h-20 print:w-20 print:h-20 object-contain"
                               referrerPolicy="no-referrer"
                             />
                           </div>
@@ -584,11 +584,11 @@ export default function CetakCutiView({ pengajuan, pegawai, jenisCuti, sisaCuti,
                         <img
                           src={dynamicQrCode}
                           alt="QR Code Verifikasi Dokumen Cuti"
-                          className="w-28 h-28 sm:w-36 sm:h-36 print:w-18 print:h-18 object-contain shrink-0"
+                          className="w-28 h-28 sm:w-36 sm:h-36 print:w-36 print:h-36 object-contain shrink-0"
                           referrerPolicy="no-referrer"
                         />
                       </div>
-                      <div className="col-span-6 p-2 flex flex-col items-center justify-center text-center min-h-[90px] print:min-h-[50px]">
+                      <div className="col-span-6 p-2 flex flex-col items-center justify-center text-center min-h-[110px]">
                         <p className="font-bold text-center leading-tight">
                           {getPegawaiDetail(selectedPrint.pejabatId)?.jabatan}
                         </p>
@@ -597,7 +597,7 @@ export default function CetakCutiView({ pengajuan, pegawai, jenisCuti, sisaCuti,
                             <img
                               src={getPegawaiDetail(selectedPrint.pejabatId)?.qrCodeUrl || `https://api.qrserver.com/v1/create-qr-code/?size=250x250&ecc=L&margin=0&data=${encodeURIComponent(`SIP-CUTI SETDA DEMAK - KEPUTUSAN PEJABAT YANG BERWENANG\nID: ${selectedPrint.id}\nNama Pejabat: ${getPegawaiNama(selectedPrint.pejabatId)}\nNIP: ${getPegawaiNip(selectedPrint.pejabatId)}\nStatus: TTE Pejabat`)}`}
                               alt="QR Code TTE Pejabat"
-                              className="w-18 h-18 sm:w-20 sm:h-20 print:w-14 print:h-14 object-contain"
+                              className="w-18 h-18 sm:w-20 sm:h-20 print:w-20 print:h-20 object-contain"
                               referrerPolicy="no-referrer"
                             />
                           </div>

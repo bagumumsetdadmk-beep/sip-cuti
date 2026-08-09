@@ -14,55 +14,61 @@
 
 /* CSS Print Stylesheet for Si-Cuti Setda */
 @media print {
-  /* 1. Set paper size to A4 portrait with tight margins for 1-page output */
+  /* 1. Set paper size to A4 portrait with tight standard margins */
   @page {
-    size: portrait;
-    margin: 0.3cm 0.4cm !important;
+    size: A4 portrait;
+    margin: 0.5cm 0.6cm !important;
   }
 
-  /* 2. Completely hide non-printable components */
-  .no-print,
-  body > *:not(#printable-area),
-  header,
-  sidebar,
-  nav {
-    display: none !important;
-  }
-
-  /* 3. Style html and body for pristine printing confined to 1 page */
+  /* 2. Style html and body for pristine printing */
   html, body {
     width: 100% !important;
-    height: 100% !important;
-    max-height: 100vh !important;
-    overflow: hidden !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
     background-color: white !important;
     background-image: none !important;
     color: black !important;
-    margin: 0 !important;
-    padding: 0 !important;
+    font-family: "Times New Roman", Times, serif !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
+    overflow: visible !important;
   }
 
-  /* 4. Hide screen elements by default */
+  /* 3. Hide all screen UI elements by default */
   body * {
-    visibility: hidden !important;
+    visibility: hidden;
   }
 
-  /* 5. Restore visibility only for the printable area and its children */
-  #printable-area, #printable-area * {
+  /* 4. Unhide printable elements and their children */
+  #printable-area,
+  #printable-area *,
+  .printable-report,
+  .printable-report *,
+  .print-only,
+  .print-only * {
     visibility: visible !important;
   }
 
-  /* 6. Force printable area to fit on exactly ONE page (rangkap 1) */
+  /* 5. Force all parent containers to allow overflow so print content is never clipped */
+  html, body, main, div {
+    overflow: visible !important;
+  }
+
+  /* 6. Explicitly hide any no-print marked elements */
+  .no-print,
+  .no-print * {
+    display: none !important;
+    visibility: hidden !important;
+  }
+
+  /* 7. Position #printable-area at top-left for 1-page printing */
   #printable-area {
-    position: fixed !important;
+    position: absolute !important;
     left: 0 !important;
     top: 0 !important;
     width: 100% !important;
-    max-width: 100% !important;
-    height: 100% !important;
-    max-height: 100vh !important;
+    height: auto !important;
     margin: 0 !important;
     padding: 0 !important;
     border: none !important;
@@ -70,24 +76,20 @@
     background: white !important;
     color: black !important;
     display: block !important;
-    overflow: hidden !important;
-    page-break-inside: avoid !important;
-    break-inside: avoid !important;
-    page-break-before: avoid !important;
-    page-break-after: avoid !important;
+    overflow: visible !important;
   }
 
-  /* 7. Fine-tuning layout sizes to fit on exactly one sheet of paper (A4 / F4) */
+  /* 8. Fine-tuning font sizes and layout so official form fits on 1 sheet (rangkap 1) */
   #printable-area {
     font-size: 8.5pt !important;
-    line-height: 1.15 !important;
+    line-height: 1.18 !important;
   }
 
   #printable-area h2 {
     font-size: 13pt !important;
     font-weight: bold !important;
-    margin-bottom: 2px !important;
-    margin-top: 1px !important;
+    margin-bottom: 4px !important;
+    margin-top: 2px !important;
   }
 
   /* Increase readability for the date and recipient block */
@@ -99,7 +101,7 @@
 
   /* Tighten spacing between table blocks */
   #printable-area .border-\[1px\] {
-    margin-bottom: 2px !important;
+    margin-bottom: 3px !important;
   }
 
   #printable-area p:not(.signature-space) {
@@ -107,7 +109,7 @@
     margin-top: 0 !important;
   }
 
-  /* Dedicated signature spacing rule for single page fit */
+  /* Dedicated signature spacing rule */
   #printable-area .signature-space {
     margin-bottom: 0.8cm !important;
     display: block !important;
@@ -119,14 +121,15 @@
   #printable-area div.p-1, 
   #printable-area div.p-2,
   #printable-area div.p-3 {
-    padding: 1px 2.5px !important;
+    padding: 1.5px 3px !important;
   }
 
-  /* Compact QR Code sizes for crisp print on 1 page */
+  /* Image & QR Code print sizing */
   #printable-area img {
     max-height: 52px !important;
     width: auto !important;
     object-fit: contain !important;
+    filter: grayscale(100%) contrast(300%) !important;
   }
 
   /* Clear default margins on the list block in container */
@@ -136,16 +139,16 @@
 
   /* Target and compact tailwind margin classes during print */
   #printable-area .print\:mb-2 {
-    margin-bottom: 1px !important;
+    margin-bottom: 2px !important;
   }
   #printable-area .print\:mb-4 {
-    margin-bottom: 2px !important;
+    margin-bottom: 3px !important;
   }
   #printable-area .print\:mt-1 {
     margin-top: 1px !important;
   }
 
-  /* 8. High-contrast solid black lines, text, and images for beautiful printing */
+  /* High contrast solid black lines, text, and images for printing */
   #printable-area,
   #printable-area * {
     color: #000000 !important;
@@ -153,8 +156,19 @@
     color-scheme: light !important;
   }
 
-  /* Make sure images (like QR Codes) are high contrast crisp black-and-white */
-  #printable-area img {
-    filter: grayscale(100%) contrast(300%) !important;
+  /* Printable Report (Rekap Cuti) styles */
+  .printable-report {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .print-only {
+    display: block !important;
   }
 }
