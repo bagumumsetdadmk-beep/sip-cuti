@@ -124,12 +124,41 @@
     padding: 1.5px 3px !important;
   }
 
-  /* Image & QR Code print sizing */
+  /* Image & QR Code print sizing and clarity */
   #printable-area img {
-    max-height: 52px !important;
-    width: auto !important;
     object-fit: contain !important;
-    filter: grayscale(100%) contrast(300%) !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Specific QR Code Sizing for High Scanability in Print */
+  #printable-area .qr-verification-img {
+    width: 2.6cm !important;
+    height: 2.6cm !important;
+    max-height: none !important;
+    max-width: none !important;
+    image-rendering: -webkit-optimize-contrast !important;
+    image-rendering: pixelated !important;
+    display: block !important;
+    margin: 0 auto !important;
+  }
+
+  #printable-area .qr-tte-img {
+    width: 2.0cm !important;
+    height: 2.0cm !important;
+    max-height: none !important;
+    max-width: none !important;
+    image-rendering: -webkit-optimize-contrast !important;
+    image-rendering: pixelated !important;
+    display: block !important;
+    margin: 0 auto !important;
+  }
+
+  /* Instansi Logo */
+  #printable-area .instansi-logo,
+  #printable-area img:not(.qr-verification-img):not(.qr-tte-img) {
+    max-height: 55px !important;
+    width: auto !important;
   }
 
   /* Clear default margins on the list block in container */

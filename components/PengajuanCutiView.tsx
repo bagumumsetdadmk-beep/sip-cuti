@@ -760,7 +760,7 @@ export default function PengajuanCutiView({
                   : 'bg-white text-amber-700 border border-amber-200 hover:bg-amber-50'
               }`}
             >
-              <span>1. Verifikator</span>
+              <span>Verifikator</span>
               <span className="px-1.5 py-0.2 bg-amber-100 text-amber-800 rounded-full text-[10px] font-mono">
                 {userPengajuan.filter(p => {
                   const s = (p.status || '').toUpperCase();
@@ -780,7 +780,7 @@ export default function PengajuanCutiView({
                   : 'bg-white text-blue-700 border border-blue-200 hover:bg-blue-50'
               }`}
             >
-              <span>2. TTE Atasan Langsung</span>
+              <span>TTE Atasan Langsung</span>
               <span className="px-1.5 py-0.2 bg-blue-100 text-blue-800 rounded-full text-[10px] font-mono">
                 {userPengajuan.filter(p => {
                   const s = (p.status || '').toUpperCase();
@@ -800,7 +800,7 @@ export default function PengajuanCutiView({
                   : 'bg-white text-purple-700 border border-purple-200 hover:bg-purple-50'
               }`}
             >
-              <span>3. TTE Pejabat Final</span>
+              <span>TTE Pejabat Final</span>
               <span className="px-1.5 py-0.2 bg-purple-100 text-purple-800 rounded-full text-[10px] font-mono">
                 {userPengajuan.filter(p => {
                   const s = (p.status || '').toUpperCase();
@@ -875,13 +875,13 @@ export default function PengajuanCutiView({
                     'Sudah Diperbaiki': 'bg-indigo-50 text-indigo-700 border-indigo-200'
                   };
                   const statusLabels: Record<string, string> = {
-                    'Menunggu': '1. Verifikasi',
-                    'Menunggu Atasan': '2. TTE Atasan Langsung',
-                    'Menunggu Pejabat': '3. TTE Pejabat Final',
+                    'Menunggu': 'Verifikasi',
+                    'Menunggu Atasan': 'TTE Atasan Langsung',
+                    'Menunggu Pejabat': 'TTE Pejabat Final',
                     'Disetujui': 'Disetujui (Siap Cetak)',
                     'Ditolak': 'Ditolak',
                     'Dalam Perbaikan': 'Dalam Perbaikan',
-                    'Sudah Diperbaiki': '1. Diperbaiki (Verifikator)'
+                    'Sudah Diperbaiki': 'Diperbaiki (Verifikator)'
                   };
                   return (
                     <tr key={pj.id} className="hover:bg-gray-50/50 transition-all">
@@ -1545,7 +1545,7 @@ export default function PengajuanCutiView({
                         ? 'bg-amber-50 border-amber-300 text-amber-900 shadow-xs ring-1 ring-amber-300 font-extrabold'
                         : 'bg-white border-slate-200 text-slate-400 opacity-60'
                     }`}>
-                      1. Verifikator
+                      Verifikator
                     </div>
                     <div className={`p-2 rounded-lg border ${
                       selectedPj.status === 'Menunggu Atasan'
@@ -1554,7 +1554,7 @@ export default function PengajuanCutiView({
                         ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
                         : 'bg-white border-slate-200 text-slate-400 opacity-60'
                     }`}>
-                      2. TTE Atasan Langsung
+                      TTE Atasan Langsung
                     </div>
                     <div className={`p-2 rounded-lg border ${
                       selectedPj.status === 'Menunggu Pejabat'
@@ -1563,7 +1563,7 @@ export default function PengajuanCutiView({
                         ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
                         : 'bg-white border-slate-200 text-slate-400 opacity-60'
                     }`}>
-                      3. TTE Pejabat Final
+                      TTE Pejabat Final
                     </div>
                   </div>
                 </div>

@@ -3,7 +3,7 @@
 /* eslint-disable @next/next/no-img-element */
 
 import React, { useState } from 'react';
-import { Search, Printer, X, FileCheck, CheckSquare, Square } from 'lucide-react';
+import { Search, Printer, X, FileCheck, CheckSquare, Square, Check } from 'lucide-react';
 import { PengajuanCuti, Pegawai, JenisCuti, SisaCutiTahunan, PengaturanInstansi } from '../lib/types';
 
 interface CetakCutiViewProps {
@@ -199,7 +199,7 @@ export default function CetakCutiView({ pengajuan, pegawai, jenisCuti, sisaCuti,
         
         const appOrigin = typeof window !== 'undefined' && window.location.origin ? window.location.origin : 'https://sip-cuti.vercel.app';
         const verificationUrl = `${appOrigin}/verifikasi/${encodeURIComponent(selectedPrint.id)}`;
-        const dynamicQrCode = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&ecc=L&margin=1&data=${encodeURIComponent(verificationUrl)}`;
+        const dynamicQrCode = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&ecc=L&margin=1&data=${encodeURIComponent(verificationUrl)}`;
 
         return (
           <div className="fixed inset-0 bg-gray-100 md:bg-black/50 overflow-y-auto z-50 flex items-start justify-center p-0 md:p-6 transition-all print:static print:inset-auto print:bg-transparent print:p-0 print:m-0 print:overflow-visible">
@@ -345,7 +345,7 @@ export default function CetakCutiView({ pengajuan, pegawai, jenisCuti, sisaCuti,
                     </div>
                   </div>
 
-                  {/* II. JENIS CUTI YANG DIAMBIL */}
+                  {/* II. JENIS CUTI YANG DIAMBIL ** */}
                   <div className="border-[1px] border-black bg-white">
                     <div className="p-1 font-bold border-b-[0.5px] border-black uppercase">II. JENIS CUTI YANG DIAMBIL **</div>
                     {isPNS ? (
@@ -353,29 +353,29 @@ export default function CetakCutiView({ pengajuan, pegawai, jenisCuti, sisaCuti,
                         <div className="border-r-[0.5px] border-black">
                           <div className="flex border-b-[0.5px] border-black">
                             <div className="flex-1 p-1 whitespace-nowrap">1. Cuti Tahunan</div>
-                            <div className="w-12 p-1 border-l-[0.5px] border-black text-center">{namaCutiLower.includes('tahunan') ? '✔' : '-'}</div>
+                            <div className="w-12 p-1 border-l-[0.5px] border-black text-center flex items-center justify-center min-h-[20px]">{namaCutiLower.includes('tahunan') ? <Check className="w-3.5 h-3.5 text-black stroke-[3]" /> : '-'}</div>
                           </div>
                           <div className="flex border-b-[0.5px] border-black">
                             <div className="flex-1 p-1 whitespace-nowrap">3. Cuti Sakit</div>
-                            <div className="w-12 p-1 border-l-[0.5px] border-black text-center">{namaCutiLower.includes('sakit') ? '✔' : '-'}</div>
+                            <div className="w-12 p-1 border-l-[0.5px] border-black text-center flex items-center justify-center min-h-[20px]">{namaCutiLower.includes('sakit') ? <Check className="w-3.5 h-3.5 text-black stroke-[3]" /> : '-'}</div>
                           </div>
                           <div className="flex">
                             <div className="flex-1 p-1 whitespace-nowrap">5. Cuti Karena Alasan Penting</div>
-                            <div className="w-12 p-1 border-l-[0.5px] border-black text-center">{namaCutiLower.includes('alasan penting') ? '✔' : '-'}</div>
+                            <div className="w-12 p-1 border-l-[0.5px] border-black text-center flex items-center justify-center min-h-[20px]">{namaCutiLower.includes('alasan penting') ? <Check className="w-3.5 h-3.5 text-black stroke-[3]" /> : '-'}</div>
                           </div>
                         </div>
                         <div>
                           <div className="flex border-b-[0.5px] border-black">
                             <div className="flex-1 p-1 whitespace-nowrap">2. Cuti Besar</div>
-                            <div className="w-12 p-1 border-l-[0.5px] border-black text-center">{namaCutiLower.includes('besar') ? '✔' : '-'}</div>
+                            <div className="w-12 p-1 border-l-[0.5px] border-black text-center flex items-center justify-center min-h-[20px]">{namaCutiLower.includes('besar') ? <Check className="w-3.5 h-3.5 text-black stroke-[3]" /> : '-'}</div>
                           </div>
                           <div className="flex border-b-[0.5px] border-black">
                             <div className="flex-1 p-1 whitespace-nowrap">4. Cuti Melahirkan</div>
-                            <div className="w-12 p-1 border-l-[0.5px] border-black text-center">{namaCutiLower.includes('melahirkan') ? '✔' : '-'}</div>
+                            <div className="w-12 p-1 border-l-[0.5px] border-black text-center flex items-center justify-center min-h-[20px]">{namaCutiLower.includes('melahirkan') ? <Check className="w-3.5 h-3.5 text-black stroke-[3]" /> : '-'}</div>
                           </div>
                           <div className="flex">
                             <div className="flex-1 p-1 whitespace-nowrap">6. Cuti di Luar Tanggungan Negara</div>
-                            <div className="w-12 p-1 border-l-[0.5px] border-black text-center">{namaCutiLower.includes('tanggungan negara') ? '✔' : '-'}</div>
+                            <div className="w-12 p-1 border-l-[0.5px] border-black text-center flex items-center justify-center min-h-[20px]">{namaCutiLower.includes('tanggungan negara') ? <Check className="w-3.5 h-3.5 text-black stroke-[3]" /> : '-'}</div>
                           </div>
                         </div>
                       </div>
@@ -383,15 +383,15 @@ export default function CetakCutiView({ pengajuan, pegawai, jenisCuti, sisaCuti,
                       <div className="grid grid-cols-1">
                         <div className="flex border-b-[0.5px] border-black">
                           <div className="flex-1 p-1 whitespace-nowrap">1. Cuti Tahunan</div>
-                          <div className="w-12 p-1 border-l-[0.5px] border-black text-center">{namaCutiLower.includes('tahunan') ? '✔' : '-'}</div>
+                          <div className="w-12 p-1 border-l-[0.5px] border-black text-center flex items-center justify-center min-h-[20px]">{namaCutiLower.includes('tahunan') ? <Check className="w-3.5 h-3.5 text-black stroke-[3]" /> : '-'}</div>
                         </div>
                         <div className="flex border-b-[0.5px] border-black">
                           <div className="flex-1 p-1 whitespace-nowrap">2. Cuti Sakit</div>
-                           <div className="w-12 p-1 border-l-[0.5px] border-black text-center">{namaCutiLower.includes('sakit') ? '✔' : '-'}</div>
+                           <div className="w-12 p-1 border-l-[0.5px] border-black text-center flex items-center justify-center min-h-[20px]">{namaCutiLower.includes('sakit') ? <Check className="w-3.5 h-3.5 text-black stroke-[3]" /> : '-'}</div>
                         </div>
                         <div className="flex">
                           <div className="flex-1 p-1 whitespace-nowrap">3. Cuti Melahirkan</div>
-                          <div className="w-12 p-1 border-l-[0.5px] border-black text-center">{namaCutiLower.includes('melahirkan') ? '✔' : '-'}</div>
+                          <div className="w-12 p-1 border-l-[0.5px] border-black text-center flex items-center justify-center min-h-[20px]">{namaCutiLower.includes('melahirkan') ? <Check className="w-3.5 h-3.5 text-black stroke-[3]" /> : '-'}</div>
                         </div>
                       </div>
                     )}
@@ -471,15 +471,15 @@ export default function CetakCutiView({ pengajuan, pegawai, jenisCuti, sisaCuti,
                       <div className="grid grid-cols-1">
                         <div className="flex border-b-[0.5px] border-black">
                           <div className="flex-1 p-1 whitespace-nowrap">1. Cuti Tahunan</div>
-                          <div className="w-12 p-1 border-l-[0.5px] border-black text-center font-mono">{namaCutiLower.includes('tahunan') ? '✔' : '-'}</div>
+                          <div className="w-12 p-1 border-l-[0.5px] border-black text-center flex items-center justify-center min-h-[20px] font-mono">{namaCutiLower.includes('tahunan') ? <Check className="w-3.5 h-3.5 text-black stroke-[3]" /> : '-'}</div>
                         </div>
                         <div className="flex border-b-[0.5px] border-black">
                           <div className="flex-1 p-1 whitespace-nowrap">2. Cuti Sakit</div>
-                          <div className="w-12 p-1 border-l-[0.5px] border-black text-center font-mono">{namaCutiLower.includes('sakit') ? '✔' : '-'}</div>
+                          <div className="w-12 p-1 border-l-[0.5px] border-black text-center flex items-center justify-center min-h-[20px] font-mono">{namaCutiLower.includes('sakit') ? <Check className="w-3.5 h-3.5 text-black stroke-[3]" /> : '-'}</div>
                         </div>
                         <div className="flex">
                           <div className="flex-1 p-1 whitespace-nowrap">3. Cuti Karena Alasan Penting</div>
-                          <div className="w-12 p-1 border-l-[0.5px] border-black text-center font-mono">{namaCutiLower.includes('alasan penting') ? '✔' : '-'}</div>
+                          <div className="w-12 p-1 border-l-[0.5px] border-black text-center flex items-center justify-center min-h-[20px] font-mono">{namaCutiLower.includes('alasan penting') ? <Check className="w-3.5 h-3.5 text-black stroke-[3]" /> : '-'}</div>
                         </div>
                       </div>
                     )}
@@ -512,9 +512,9 @@ export default function CetakCutiView({ pengajuan, pegawai, jenisCuti, sisaCuti,
                           {showQRPemohon ? (
                             <div className="my-1 flex items-center justify-center shrink-0">
                               <img
-                                src={pDetail?.qrCodeUrl || `https://api.qrserver.com/v1/create-qr-code/?size=250x250&ecc=L&margin=0&data=${encodeURIComponent(`SIP-CUTI SETDA DEMAK - VERIFIKASI PEMOHON\nID: ${selectedPrint.id}\nNama: ${pDetail?.nama || ''}\nNIP: ${pDetail?.nip || ''}\nStatus: TTE Pemohon`)}`}
+                                src={pDetail?.qrCodeUrl || `https://api.qrserver.com/v1/create-qr-code/?size=300x300&ecc=M&margin=0&data=${encodeURIComponent(`SIP-CUTI SETDA DEMAK - VERIFIKASI PEMOHON\nID: ${selectedPrint.id}\nNama: ${pDetail?.nama || ''}\nNIP: ${pDetail?.nip || ''}\nStatus: TTE Pemohon`)}`}
                                 alt="QR Code TTE Pemohon"
-                                className="w-18 h-18 sm:w-20 sm:h-20 print:w-20 print:h-20 object-contain"
+                                className="w-20 h-20 sm:w-24 sm:h-24 print:w-22 print:h-22 object-contain qr-tte-img"
                                 referrerPolicy="no-referrer"
                               />
                             </div>
@@ -538,7 +538,7 @@ export default function CetakCutiView({ pengajuan, pegawai, jenisCuti, sisaCuti,
                       <div className="p-1 whitespace-nowrap">TIDAK DISETUJUI ****</div>
                     </div>
                     <div className="grid grid-cols-4 min-h-[15px] border-b-[0.5px] border-black text-center">
-                      <div className="p-1 border-r-[0.5px] border-black">✔</div>
+                      <div className="p-1 border-r-[0.5px] border-black flex items-center justify-center min-h-[22px]"><Check className="w-3.5 h-3.5 text-black stroke-[3]" /></div>
                       <div className="p-1 border-r-[0.5px] border-black"></div>
                       <div className="p-1 border-r-[0.5px] border-black"></div>
                       <div className="p-1"></div>
@@ -552,9 +552,9 @@ export default function CetakCutiView({ pengajuan, pegawai, jenisCuti, sisaCuti,
                         {showQRAtasan ? (
                           <div className="my-1 flex items-center justify-center shrink-0">
                             <img
-                              src={getPegawaiDetail(selectedPrint.atasanId)?.qrCodeUrl || `https://api.qrserver.com/v1/create-qr-code/?size=250x250&ecc=L&margin=0&data=${encodeURIComponent(`SIP-CUTI SETDA DEMAK - PERTIMBANGAN ATASAN LANGSUNG\nID: ${selectedPrint.id}\nNama Atasan: ${getPegawaiNama(selectedPrint.atasanId)}\nNIP: ${getPegawaiNip(selectedPrint.atasanId)}\nStatus: TTE Atasan`)}`}
+                              src={getPegawaiDetail(selectedPrint.atasanId)?.qrCodeUrl || `https://api.qrserver.com/v1/create-qr-code/?size=300x300&ecc=M&margin=0&data=${encodeURIComponent(`SIP-CUTI SETDA DEMAK - PERTIMBANGAN ATASAN LANGSUNG\nID: ${selectedPrint.id}\nNama Atasan: ${getPegawaiNama(selectedPrint.atasanId)}\nNIP: ${getPegawaiNip(selectedPrint.atasanId)}\nStatus: TTE Atasan`)}`}
                               alt="QR Code TTE Atasan"
-                              className="w-18 h-18 sm:w-20 sm:h-20 print:w-20 print:h-20 object-contain"
+                              className="w-20 h-20 sm:w-24 sm:h-24 print:w-22 print:h-22 object-contain qr-tte-img"
                               referrerPolicy="no-referrer"
                             />
                           </div>
@@ -579,19 +579,22 @@ export default function CetakCutiView({ pengajuan, pegawai, jenisCuti, sisaCuti,
                       <div className="p-1 whitespace-nowrap">TIDAK DISETUJUI ****</div>
                     </div>
                     <div className="grid grid-cols-4 min-h-[15px] border-b-[0.5px] border-black text-center">
-                      <div className="p-1 border-r-[0.5px] border-black">✔</div>
+                      <div className="p-1 border-r-[0.5px] border-black flex items-center justify-center min-h-[22px]"><Check className="w-3.5 h-3.5 text-black stroke-[3]" /></div>
                       <div className="p-1 border-r-[0.5px] border-black"></div>
                       <div className="p-1 border-r-[0.5px] border-black"></div>
                       <div className="p-1"></div>
                     </div>
                     <div className="grid grid-cols-12">
-                      <div className="col-span-6 border-r-[0.5px] border-black p-2 flex items-center justify-center">
+                      <div className="col-span-6 border-r-[0.5px] border-black p-2 flex flex-col items-center justify-center">
                         <img
                           src={dynamicQrCode}
                           alt="QR Code Verifikasi Dokumen Cuti"
-                          className="w-28 h-28 sm:w-36 sm:h-36 print:w-36 print:h-36 object-contain shrink-0"
+                          className="w-32 h-32 sm:w-40 sm:h-40 print:w-36 print:h-36 object-contain shrink-0 qr-verification-img"
                           referrerPolicy="no-referrer"
                         />
+                        <span className="text-[9px] font-mono tracking-tighter text-black font-semibold mt-1 print:text-[8pt] text-center">
+                          Scan Verifikasi Dokumen
+                        </span>
                       </div>
                       <div className="col-span-6 p-2 flex flex-col items-center justify-center text-center min-h-[110px]">
                         <p className="font-bold text-center leading-tight">
@@ -600,9 +603,9 @@ export default function CetakCutiView({ pengajuan, pegawai, jenisCuti, sisaCuti,
                         {showQRPejabat ? (
                           <div className="my-1 flex items-center justify-center shrink-0">
                             <img
-                              src={getPegawaiDetail(selectedPrint.pejabatId)?.qrCodeUrl || `https://api.qrserver.com/v1/create-qr-code/?size=250x250&ecc=L&margin=0&data=${encodeURIComponent(`SIP-CUTI SETDA DEMAK - KEPUTUSAN PEJABAT YANG BERWENANG\nID: ${selectedPrint.id}\nNama Pejabat: ${getPegawaiNama(selectedPrint.pejabatId)}\nNIP: ${getPegawaiNip(selectedPrint.pejabatId)}\nStatus: TTE Pejabat`)}`}
+                              src={getPegawaiDetail(selectedPrint.pejabatId)?.qrCodeUrl || `https://api.qrserver.com/v1/create-qr-code/?size=300x300&ecc=M&margin=0&data=${encodeURIComponent(`SIP-CUTI SETDA DEMAK - KEPUTUSAN PEJABAT YANG BERWENANG\nID: ${selectedPrint.id}\nNama Pejabat: ${getPegawaiNama(selectedPrint.pejabatId)}\nNIP: ${getPegawaiNip(selectedPrint.pejabatId)}\nStatus: TTE Pejabat`)}`}
                               alt="QR Code TTE Pejabat"
-                              className="w-18 h-18 sm:w-20 sm:h-20 print:w-20 print:h-20 object-contain"
+                              className="w-20 h-20 sm:w-24 sm:h-24 print:w-22 print:h-22 object-contain qr-tte-img"
                               referrerPolicy="no-referrer"
                             />
                           </div>
