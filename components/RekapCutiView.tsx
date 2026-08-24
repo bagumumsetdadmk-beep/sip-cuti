@@ -7,20 +7,22 @@ import { Pegawai, JenisCuti, PengaturanUser } from '../lib/types';
 interface RekapCutiViewProps {
   pegawai: Pegawai[];
   jenisCuti: JenisCuti[];
-  dapatkanRekapCuti: () => {
+  dapatkanRekapCuti: (tahun?: number) => {
     pegawai: Pegawai;
     rekap: { [key: string]: number };
+    totalCutiDiambil?: number;
   }[];
   currentUser?: PengaturanUser | null;
 }
 
 export default function RekapCutiView({ pegawai, jenisCuti, dapatkanRekapCuti, currentUser }: RekapCutiViewProps) {
+  const currentYear = new Date().getFullYear();
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedYear, setSelectedYear] = useState<number>(currentYear);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
-
   
-  const rekapData = dapatkanRekapCuti();
+  const rekapData = dapatkanRekapCuti(selectedYear);
 
   const filteredRekap = rekapData.filter(item => {
     const s = searchTerm.toLowerCase();
@@ -33,13 +35,16 @@ export default function RekapCutiView({ pegawai, jenisCuti, dapatkanRekapCuti, c
     window.print();
   };
 
+  // Generate available years for filter
+  const availableYears = [currentYear - 2, currentYear - 1, currentYear, currentYear + 1];
+
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 no-print">
         <div>
           <h3 className="text-base font-bold text-gray-800">Rekapitulasi Pengambilan Cuti Pegawai</h3>
-          <p className="text-xs text-gray-500">Kompilasi total hari cuti yang telah diambil/digunakan oleh seluruh pegawai ASN berdasarkan masing-masing jenis cuti resmi.</p>
+          <p className="text-xs text-gray-500">Kompilasi total hari cuti yang telah diambil/digunakan oleh seluruh pegawai ASN pada tahun berjalan ({selectedYear}).</p>
         </div>
         <div className="flex gap-2">
           <button
@@ -52,19 +57,37 @@ export default function RekapCutiView({ pegawai, jenisCuti, dapatkanRekapCuti, c
         </div>
       </div>
 
-      {/* Search */}
-      <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex items-center gap-4 no-print">
-        <div className="relative w-full md:w-80 shrink-0">
-          <Search className="w-4 h-4 text-gray-400 absolute left-3 top-2.5" />
-          <input
-            type="text"
-            placeholder="Cari pegawai..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-gray-50 border border-gray-200 rounded-lg pl-9 pr-4 py-1.5 text-xs text-gray-700 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
-          />
+      {/* Filter Bar */}
+      <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 no-print">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="relative w-full sm:w-72 shrink-0">
+            <Search className="w-4 h-4 text-gray-400 absolute left-3 top-2.5" />
+            <input
+              type="text"
+              placeholder="Cari nama, NIP, unit kerja..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full bg-gray-50 border border-gray-200 rounded-lg pl-9 pr-4 py-1.5 text-xs text-gray-700 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
+            />
+          </div>
+
+          <div className="flex items-center gap-2">
+            <label className="text-xs font-semibold text-gray-600 whitespace-nowrap">Tahun:</label>
+            <select
+              value={selectedYear}
+              onChange={(e) => setSelectedYear(Number(e.target.value))}
+              className="bg-gray-50 border border-gray-200 text-gray-700 text-xs rounded-lg px-3 py-1.5 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 font-semibold"
+            >
+              {availableYears.map(yr => (
+                <option key={yr} value={yr}>
+                  {yr} {yr === currentYear ? '(Tahun Berjalan)' : ''}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
-        <p className="text-[11px] text-gray-400 italic">Mencakup seluruh data pengajuan cuti berstatus &quot;Disetujui&quot; pada tahun 2026.</p>
+
+        <p className="text-[11px] text-gray-400 italic">Mencakup data pengajuan cuti berstatus &quot;Disetujui&quot; pada tahun {selectedYear}.</p>
       </div>
 
       {/* Layout Printable Container */}
@@ -75,7 +98,7 @@ export default function RekapCutiView({ pegawai, jenisCuti, dapatkanRekapCuti, c
           <h1 className="font-extrabold text-base uppercase">SEKRETARIAT DAERAH</h1>
           <p className="text-xs">Jl. Kyai Singgkil No. 7, Demak, Jawa Tengah 59511 • Telp: (0291) 685112</p>
           <div className="border-t border-gray-600 mt-2 pt-2">
-            <h3 className="font-bold text-xs uppercase underline">LAPORAN REKAPITULASI PENYALURAN CUTI PEGAWAI ASN TAHUN 2026</h3>
+            <h3 className="font-bold text-xs uppercase underline">LAPORAN REKAPITULASI PENYALURAN CUTI PEGAWAI ASN TAHUN {selectedYear}</h3>
           </div>
         </div>
 

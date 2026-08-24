@@ -61,6 +61,8 @@ export default function Home() {
     hitungHariKerja,
     hitungTanggalSelesai,
     hitungTotalCutiTahunan,
+    hitungSisaKuotaJenisCuti,
+    dapatkanSemuaSisaKuotaPegawai,
     dapatkanRekapCuti
   } = useAppData();
 
@@ -135,11 +137,15 @@ export default function Home() {
           <SisaCutiView 
             sisaCuti={sisaCuti}
             pegawai={pegawai}
+            jenisCuti={jenisCuti}
+            pengajuan={pengajuan}
             addSisaCuti={addSisaCuti}
             updateSisaCuti={updateSisaCuti}
             deleteSisaCuti={deleteSisaCuti}
             generateSisaCutiNextYear={generateSisaCutiNextYear}
             hitungTotalCutiTahunan={hitungTotalCutiTahunan}
+            hitungSisaKuotaJenisCuti={hitungSisaKuotaJenisCuti}
+            dapatkanSemuaSisaKuotaPegawai={dapatkanSemuaSisaKuotaPegawai}
             currentUser={currentUser}
           />
         );

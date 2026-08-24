@@ -150,6 +150,14 @@ export default function PengajuanCutiView({
     return selected ? (selected.nama.toLowerCase().includes('tahunan') || selected.id === 'jc-1') : false;
   }, [jenisCuti, formJenisCutiId]);
 
+  // Pengecualian batasan 3 hari untuk Cuti Sakit & Cuti Alasan Penting
+  const isCutiMendadakAllowed = React.useMemo(() => {
+    const selected = jenisCuti.find(jc => jc.id === formJenisCutiId);
+    if (!selected) return false;
+    const nameLower = selected.nama.toLowerCase();
+    return nameLower.includes('sakit') || nameLower.includes('alasan penting') || nameLower.includes('penting');
+  }, [jenisCuti, formJenisCutiId]);
+
   // Check if selected leave type includes holidays & weekends in its duration (Aturan BKN)
   const selectedJenisCutiCountsHolidays = React.useMemo(() => {
     const selected = jenisCuti.find(jc => jc.id === formJenisCutiId);
@@ -157,6 +165,59 @@ export default function PengajuanCutiView({
     const nameLower = selected.nama.toLowerCase();
     return nameLower.includes('sakit') || nameLower.includes('melahirkan') || nameLower.includes('besar') || nameLower.includes('luar tanggungan');
   }, [jenisCuti, formJenisCutiId]);
+
+  // Tahun rencana pelaksanaan cuti
+  const currentLeaveYear = React.useMemo(() => {
+    if (formMulai) return new Date(formMulai).getFullYear();
+    if (formTanggalPengajuan) return new Date(formTanggalPengajuan).getFullYear();
+    return new Date().getFullYear();
+  }, [formMulai, formTanggalPengajuan]);
+
+  // Perhitungan Sisa Kuota Realtime untuk Seluruh Jenis Cuti
+  const selectedQuotaInfo = React.useMemo(() => {
+    if (!formPegawaiId || !formJenisCutiId) return null;
+    const jc = jenisCuti.find(j => j.id === formJenisCutiId);
+    if (!jc) return null;
+
+    const isTahunan = jc.nama.toLowerCase().includes('tahunan') || jc.id === 'jc-1';
+    
+    // Hitung hari yang sudah terpakai (disetujui) pada tahun target
+    const disetujui = pengajuan.filter(pj => {
+      if (editingId && pj.id === editingId) return false; // exclude pengajuan yang sedang diedit
+      if (pj.pegawaiId !== formPegawaiId || pj.jenisCutiId !== formJenisCutiId || pj.status !== 'Disetujui') return false;
+      const pjYear = pj.tanggalMulai ? new Date(pj.tanggalMulai).getFullYear() : currentLeaveYear;
+      return pjYear === currentLeaveYear;
+    });
+    const terpakai = disetujui.reduce((acc, curr) => acc + (curr.jumlahHari || 0), 0);
+
+    if (isTahunan) {
+      const sc = sisaCuti.find(s => s.pegawaiId === formPegawaiId);
+      const totalSisa = hitungTotalCutiTahunan(sc);
+      const kuotaAwal = totalSisa + terpakai;
+      return {
+        isTahunan: true,
+        kuotaAwal,
+        terpakai,
+        sisa: totalSisa,
+        sisaN2: sc?.sisaN2 || 0,
+        sisaN1: sc?.sisaN1 || 0,
+        sisaN: sc?.sisaN || 12,
+        satuan: 'Hari Kerja' as const,
+        nama: jc.nama
+      };
+    } else {
+      const kuotaAwal = jc.kuotaDefault || 0;
+      const sisa = Math.max(0, kuotaAwal - terpakai);
+      return {
+        isTahunan: false,
+        kuotaAwal,
+        terpakai,
+        sisa,
+        satuan: selectedJenisCutiCountsHolidays ? ('Hari Kalender' as const) : ('Hari Kerja' as const),
+        nama: jc.nama
+      };
+    }
+  }, [formPegawaiId, formJenisCutiId, currentLeaveYear, jenisCuti, pengajuan, sisaCuti, editingId, hitungTotalCutiTahunan, selectedJenisCutiCountsHolidays]);
 
   // Reset Jenis Cuti jika yang terpilih tidak lagi tersedia untuk pegawai tersebut
   useEffect(() => {
@@ -341,23 +402,30 @@ export default function PengajuanCutiView({
       return;
     }
 
-    // Validasi Tanggal Pelaksanaan Cuti minimal 3 hari setelah tanggal pengajuan
-    const tglPengajuan = new Date(formTanggalPengajuan);
-    const tglMulai = new Date(formMulai);
-    const diffTime = tglMulai.getTime() - tglPengajuan.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
-    if (diffDays < 3) {
-      showToast('Tanggal pelaksanaan cuti minimal 3 hari setelah tanggal pengajuan!', 'error');
-      return;
+    // Validasi Tanggal Pelaksanaan Cuti:
+    // Aturan 3 hari sebelum pelaksanaan berlaku untuk SELAIN Cuti Sakit dan Cuti Alasan Penting
+    if (!isCutiMendadakAllowed) {
+      const tglPengajuan = new Date(formTanggalPengajuan);
+      const tglMulai = new Date(formMulai);
+      const diffTime = tglMulai.getTime() - tglPengajuan.getTime();
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      
+      if (diffDays < 3) {
+        showToast(
+          `Untuk ${selectedQuotaInfo?.nama || 'cuti ini'}, tanggal pelaksanaan cuti minimal diajukan 3 hari sebelumnya! (Ketentuan 3 hari dikecualikan untuk Cuti Sakit dan Cuti Alasan Penting).`, 
+          'error'
+        );
+        return;
+      }
     }
 
-    // Validasi Cuti Tahunan: Check Sisa Kuota
-    if (isCutiTahunanSelected) {
-      const sc = sisaCuti.find(s => s.pegawaiId === formPegawaiId);
-      const totalSisa = sc ? (sc.sisaN2 + sc.sisaN1 + sc.sisaN) : 0;
-      if (formHari > totalSisa) {
-        showToast(`Kuota sisa cuti tahunan tidak mencukupi! Durasi pengajuan adalah ${formHari} hari kerja, sedangkan total sisa kuota pegawai yang tersedia adalah ${totalSisa} hari kerja.`, 'error');
+    // Validasi Sisa Kuota untuk SELURUH Jenis Cuti
+    if (selectedQuotaInfo) {
+      if (formHari > selectedQuotaInfo.sisa) {
+        showToast(
+          `Sisa kuota untuk ${selectedQuotaInfo.nama} tidak mencukupi! Durasi pengajuan: ${formHari} ${selectedQuotaInfo.satuan}, sedangkan sisa kuota yang tersedia pada tahun ${currentLeaveYear} adalah ${selectedQuotaInfo.sisa} ${selectedQuotaInfo.satuan}.`, 
+          'error'
+        );
         return;
       }
     }
@@ -1098,50 +1166,87 @@ export default function PengajuanCutiView({
                   </select>
                 </div>
 
-                {/* SISA KUOTA INFO */}
-                {isCutiTahunanSelected ? (
-                  <div className="col-span-2 bg-slate-50 border border-slate-200 rounded-xl p-4">
-                    <div className="flex items-center gap-2 mb-3 text-slate-700 font-bold text-[11px] tracking-wide">
-                      <Scale className="w-4 h-4" />
-                      SISA KUOTA CUTI TAHUNAN ({new Date().getFullYear() - 2}, {new Date().getFullYear() - 1}, {new Date().getFullYear()}):
-                    </div>
-                    {formPegawaiId ? (() => {
-                      const sc = sisaCuti.find(s => s.pegawaiId === formPegawaiId);
-                      const sisaN2 = sc?.sisaN2 || 0;
-                      const sisaN1 = sc?.sisaN1 || 0;
-                      const sisaN = sc?.sisaN || 12;
-                      const n = new Date().getFullYear();
-                      
-                      return (
+                {/* SISA KUOTA INFO SELURUH JENIS CUTI */}
+                <div className="col-span-2 bg-slate-50 border border-slate-200 rounded-xl p-4">
+                  {selectedQuotaInfo ? (
+                    selectedQuotaInfo.isTahunan ? (
+                      <div>
+                        <div className="flex items-center justify-between gap-2 mb-3 text-slate-700 font-bold text-[11px] tracking-wide">
+                          <div className="flex items-center gap-2">
+                            <Scale className="w-4 h-4 text-blue-600" />
+                            <span>SISA KUOTA CUTI TAHUNAN ({currentLeaveYear - 2}, {currentLeaveYear - 1}, {currentLeaveYear}):</span>
+                          </div>
+                          <span className="text-xs bg-blue-100 text-blue-800 font-bold px-2 py-0.5 rounded-full">
+                            Total Sisa: {selectedQuotaInfo.sisa} Hari Kerja
+                          </span>
+                        </div>
                         <div className="grid grid-cols-3 gap-3">
                           <div className="bg-[#FFF9E6] border border-[#FDEB8D] rounded-lg p-3 text-center">
-                            <div className="text-[10px] font-bold text-[#A85800] uppercase mb-1">SISA {n - 2}</div>
-                            <div className="text-xl font-black text-[#8A4600]">{sisaN2} Hari</div>
+                            <div className="text-[10px] font-bold text-[#A85800] uppercase mb-1">SISA {currentLeaveYear - 2}</div>
+                            <div className="text-xl font-black text-[#8A4600]">{selectedQuotaInfo.sisaN2} Hari</div>
                           </div>
                           <div className="bg-[#E6F8F0] border border-[#A6E8C3] rounded-lg p-3 text-center">
-                            <div className="text-[10px] font-bold text-[#006037] uppercase mb-1">SISA {n - 1}</div>
-                            <div className="text-xl font-black text-[#004729]">{sisaN1} Hari</div>
+                            <div className="text-[10px] font-bold text-[#006037] uppercase mb-1">SISA {currentLeaveYear - 1}</div>
+                            <div className="text-xl font-black text-[#004729]">{selectedQuotaInfo.sisaN1} Hari</div>
                           </div>
                           <div className="bg-[#EBF3FF] border border-[#A8C7FA] rounded-lg p-3 text-center">
-                            <div className="text-[10px] font-bold text-[#00388F] uppercase mb-1">KUOTA {n}</div>
-                            <div className="text-xl font-black text-[#002766]">{sisaN} Hari</div>
+                            <div className="text-[10px] font-bold text-[#00388F] uppercase mb-1">KUOTA {currentLeaveYear}</div>
+                            <div className="text-xl font-black text-[#002766]">{selectedQuotaInfo.sisaN} Hari</div>
                           </div>
                         </div>
-                      );
-                    })() : (
-                      <p className="text-xs text-amber-600 font-medium text-center py-2 bg-amber-50 rounded-lg border border-dashed border-amber-200">
-                        Silakan pilih pegawai terlebih dahulu untuk memuat informasi sisa kuota cuti tahunan.
-                      </p>
-                    )}
-                  </div>
-                ) : (
-                  <div className="col-span-2 md:col-span-1 p-3 bg-blue-50 text-[10px] rounded border border-blue-100 flex items-center gap-2">
-                    <Info className="w-4 h-4 text-blue-700 shrink-0" />
-                    <p className="text-blue-950">
-                      Kategori cuti non-tahunan. Kuota tidak memotong saldo cuti tahunan berjalan.
+                      </div>
+                    ) : (
+                      <div>
+                        <div className="flex items-center justify-between gap-2 mb-3 text-slate-700 font-bold text-[11px] tracking-wide">
+                          <div className="flex items-center gap-2">
+                            <Scale className="w-4 h-4 text-emerald-600" />
+                            <span>STATUS KUOTA {selectedQuotaInfo.nama.toUpperCase()} (TAHUN {currentLeaveYear}):</span>
+                          </div>
+                          <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${selectedQuotaInfo.sisa > 0 ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'}`}>
+                            Sisa: {selectedQuotaInfo.sisa} {selectedQuotaInfo.satuan}
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-3 gap-3">
+                          <div className="bg-slate-100 border border-slate-200 rounded-lg p-2.5 text-center">
+                            <div className="text-[10px] font-bold text-slate-600 uppercase mb-0.5">KUOTA AWAL/THN</div>
+                            <div className="text-lg font-black text-slate-800">{selectedQuotaInfo.kuotaAwal} {selectedQuotaInfo.satuan.includes('Kalender') ? 'HK' : 'Hari'}</div>
+                          </div>
+                          <div className="bg-amber-50 border border-amber-200 rounded-lg p-2.5 text-center">
+                            <div className="text-[10px] font-bold text-amber-700 uppercase mb-0.5">TERPAKAI ({currentLeaveYear})</div>
+                            <div className="text-lg font-black text-amber-900">{selectedQuotaInfo.terpakai} {selectedQuotaInfo.satuan.includes('Kalender') ? 'HK' : 'Hari'}</div>
+                          </div>
+                          <div className={`border rounded-lg p-2.5 text-center ${selectedQuotaInfo.sisa > 0 ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200'}`}>
+                            <div className={`text-[10px] font-bold uppercase mb-0.5 ${selectedQuotaInfo.sisa > 0 ? 'text-emerald-700' : 'text-red-700'}`}>SISA TERSEDIA</div>
+                            <div className={`text-lg font-black ${selectedQuotaInfo.sisa > 0 ? 'text-emerald-900' : 'text-red-900'}`}>{selectedQuotaInfo.sisa} {selectedQuotaInfo.satuan.includes('Kalender') ? 'HK' : 'Hari'}</div>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  ) : (
+                    <p className="text-xs text-amber-600 font-medium text-center py-2 bg-amber-50 rounded-lg border border-dashed border-amber-200">
+                      Silakan pilih pegawai dan jenis cuti terlebih dahulu untuk memuat kalkulasi sisa kuota.
                     </p>
-                  </div>
-                )}
+                  )}
+                </div>
+
+                {/* INFO ATURAN PENGAJUAN & BATASAN 3 HARI */}
+                <div className="col-span-2">
+                  {isCutiMendadakAllowed ? (
+                    <div className="p-2.5 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-900 text-xs flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                      <span>
+                        <strong>Pengecualian Khusus:</strong> Untuk <strong>{jenisCuti.find(jc => jc.id === formJenisCutiId)?.nama}</strong>, pengajuan dapat dilakukan pada <strong>hari H pelaksanaan cuti</strong> karena sifatnya yang mendesak/mendadak (tanpa batasan minimal 3 hari sebelumnya).
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="p-2.5 bg-blue-50 border border-blue-200 rounded-lg text-blue-950 text-xs flex items-center gap-2">
+                      <Info className="w-4 h-4 text-blue-600 shrink-0" />
+                      <span>
+                        <strong>Ketentuan Batasan:</strong> Pengajuan <strong>{jenisCuti.find(jc => jc.id === formJenisCutiId)?.nama || 'Cuti'}</strong> wajib diajukan <strong>minimal 3 hari</strong> sebelum tanggal mulai pelaksanaan cuti.
+                      </span>
+                    </div>
+                  )}
+                </div>
 
                 <div className="col-span-2 md:col-span-1 space-y-1">
                   <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider font-mono">Tanggal Mulai Cuti *</label>

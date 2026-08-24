@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Pegawai, HariLibur, AtasanPejabat, JenisCuti, SisaCutiTahunan, PengajuanCuti, PengaturanInstansi, PengaturanUser } from '../lib/types';
+import { Pegawai, HariLibur, AtasanPejabat, JenisCuti, SisaCutiTahunan, PengajuanCuti, PengaturanInstansi, PengaturanUser, SisaKuotaDetail } from '../lib/types';
 import { supabase } from '../lib/supabase';
 import { getStorageFilePath } from '../lib/utils';
 import { initialUsers, defaultPengaturanInstansi, initialPegawai, initialHariLibur, initialAtasanPejabat, initialJenisCuti, initialSisaCutiTahunan, initialPengajuanCuti } from '../lib/initialData';
@@ -907,13 +907,102 @@ export function useAppData() {
     return sc.sisaN + carryN1 + carryN2;
   };
 
-  const dapatkanRekapCuti = () => {
+  const hitungSisaKuotaJenisCuti = (
+    pegawaiId: string, 
+    jenisCutiId: string, 
+    tahun?: number, 
+    excludePengajuanId?: string
+  ): SisaKuotaDetail => {
+    const targetYear = tahun || new Date().getFullYear();
+    const jc = jenisCuti.find(j => j.id === jenisCutiId);
+    if (!jc) {
+      return {
+        jenisCutiId,
+        namaJenis: 'Cuti',
+        kuotaAwal: 0,
+        terpakai: 0,
+        sisa: 0,
+        satuan: 'Hari Kerja',
+        keterangan: '-'
+      };
+    }
+
+    const isTahunan = jc.nama.toLowerCase().includes('tahunan');
+    const countAll = isCountAllDays(jenisCutiId);
+    const satuan: 'Hari Kerja' | 'Hari Kalender' = countAll ? 'Hari Kalender' : 'Hari Kerja';
+
+    // Hitung berapa hari yang sudah diambil & disetujui pada tahun tersebut
+    const disetujui = pengajuan.filter(pj => {
+      if (excludePengajuanId && pj.id === excludePengajuanId) return false;
+      if (pj.pegawaiId !== pegawaiId || pj.jenisCutiId !== jenisCutiId || pj.status !== 'Disetujui') return false;
+      const pjYear = pj.tanggalMulai ? new Date(pj.tanggalMulai).getFullYear() : targetYear;
+      return pjYear === targetYear;
+    });
+    const terpakai = disetujui.reduce((acc, curr) => acc + (curr.jumlahHari || 0), 0);
+
+    if (isTahunan) {
+      const sc = sisaCuti.find(s => s.pegawaiId === pegawaiId);
+      const totalSisa = hitungTotalCutiTahunan(sc);
+      const kuotaAwal = totalSisa + terpakai;
+      return {
+        jenisCutiId: jc.id,
+        namaJenis: jc.nama,
+        kuotaAwal,
+        terpakai,
+        sisa: totalSisa,
+        satuan,
+        keterangan: sc ? `N-2: ${sc.sisaN2}, N-1: ${sc.sisaN1}, N: ${sc.sisaN}` : 'Default 12 hari'
+      };
+    } else {
+      const kuotaAwal = jc.kuotaDefault || 0;
+      const sisa = Math.max(0, kuotaAwal - terpakai);
+      return {
+        jenisCutiId: jc.id,
+        namaJenis: jc.nama,
+        kuotaAwal,
+        terpakai,
+        sisa,
+        satuan,
+        keterangan: jc.keterangan || `Kuota maksimal ${kuotaAwal} hari per tahun`
+      };
+    }
+  };
+
+  const dapatkanSemuaSisaKuotaPegawai = (
+    pegawaiId: string, 
+    tahun?: number, 
+    excludePengajuanId?: string
+  ): SisaKuotaDetail[] => {
+    return jenisCuti.map(jc => hitungSisaKuotaJenisCuti(pegawaiId, jc.id, tahun, excludePengajuanId));
+  };
+
+  const dapatkanDaftarSisaKuotaSemuaPegawai = (tahun?: number) => {
+    const targetYear = tahun || new Date().getFullYear();
+    return pegawai.map(p => {
+      const kuotaList = dapatkanSemuaSisaKuotaPegawai(p.id, targetYear);
+      const totalTerpakai = kuotaList.reduce((acc, curr) => acc + curr.terpakai, 0);
+      const totalSisa = kuotaList.reduce((acc, curr) => acc + curr.sisa, 0);
+      return {
+        pegawai: p,
+        kuotaList,
+        totalTerpakai,
+        totalSisa
+      };
+    });
+  };
+
+  const dapatkanRekapCuti = (tahun?: number) => {
+    const targetYear = tahun || new Date().getFullYear();
     return pegawai.map(p => {
       const rekap: { [key: string]: number } = {};      
       jenisCuti.forEach(jc => {
         rekap[jc.id] = 0;
       });
-      const disetujui = pengajuan.filter(pj => pj.pegawaiId === p.id && pj.status === 'Disetujui');      
+      const disetujui = pengajuan.filter(pj => {
+        if (pj.pegawaiId !== p.id || pj.status !== 'Disetujui') return false;
+        if (!pj.tanggalMulai) return false;
+        return new Date(pj.tanggalMulai).getFullYear() === targetYear;
+      });      
       let totalCutiDiambil = 0;
       disetujui.forEach(pj => {
         if (rekap[pj.jenisCutiId] !== undefined) {
@@ -979,6 +1068,9 @@ export function useAppData() {
     hitungHariKerja,
     hitungTanggalSelesai,
     hitungTotalCutiTahunan,
+    hitungSisaKuotaJenisCuti,
+    dapatkanSemuaSisaKuotaPegawai,
+    dapatkanDaftarSisaKuotaSemuaPegawai,
     dapatkanRekapCuti
   };
 }

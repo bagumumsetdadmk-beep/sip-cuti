@@ -78,6 +78,16 @@ export interface PengaturanInstansi {
   logoUrl?: string;
 }
 
+export interface SisaKuotaDetail {
+  jenisCutiId: string;
+  namaJenis: string;
+  kuotaAwal: number;
+  terpakai: number;
+  sisa: number;
+  satuan: 'Hari Kerja' | 'Hari Kalender';
+  keterangan?: string;
+}
+
 export interface PengaturanUser {
   id: string;
   username: string;
