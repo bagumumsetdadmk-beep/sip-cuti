@@ -112,8 +112,8 @@ export default function SisaCutiView({
       return { jenisCutiId: jcId, namaJenis: 'Cuti', kuotaAwal: 0, terpakai: 0, sisa: 0, satuan: 'Hari Kerja' };
     }
     const isTahunan = jc.nama.toLowerCase().includes('tahunan') || jc.id === 'jc-1';
-    const isKalender = jc.nama.toLowerCase().includes('sakit') || jc.nama.toLowerCase().includes('melahirkan') || jc.nama.toLowerCase().includes('besar') || jc.nama.toLowerCase().includes('luar tanggungan');
-    const satuan = isKalender ? ('Hari Kalender' as const) : ('Hari Kerja' as const);
+    const isHariKerja = jc.nama.toLowerCase().includes('tahunan') || jc.nama.toLowerCase().includes('alasan penting') || jc.nama.toLowerCase().includes('penting');
+    const satuan = (!isHariKerja) ? ('Hari Kalender' as const) : ('Hari Kerja' as const);
 
     const disetujui = pengajuan.filter(pj => {
       if (pj.pegawaiId !== pegawaiId || pj.jenisCutiId !== jcId || pj.status !== 'Disetujui') return false;

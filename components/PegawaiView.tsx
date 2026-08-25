@@ -279,7 +279,6 @@ export default function PegawaiView({ pegawai, addPegawai, updatePegawai, delete
                 <th className="p-4">NIP & Nama Pegawai</th>
                 <th className="p-4">Jenis Kelamin</th>
                 <th className="p-4">Jabatan & Unit Kerja</th>
-                <th className="p-4">Masa Kerja</th>
                 <th className="p-4">Status</th>
                 <th className="p-4 text-center">Aksi</th>
               </tr>
@@ -287,7 +286,7 @@ export default function PegawaiView({ pegawai, addPegawai, updatePegawai, delete
             <tbody className="divide-y divide-gray-100 text-gray-700">
               {filteredPegawaiBase.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="p-8 text-center text-gray-400">
+                  <td colSpan={6} className="p-8 text-center text-gray-400">
                     Data pegawai tidak ditemukan atau kosong.
                   </td>
                 </tr>
@@ -313,11 +312,6 @@ export default function PegawaiView({ pegawai, addPegawai, updatePegawai, delete
                         <span className="bg-blue-50 text-blue-700 border border-blue-100 px-2 py-0.5 rounded text-[10px] font-bold">
                           {p.unitKerja}
                         </span>
-                      </div>
-                    </td>
-                    <td className="p-4">
-                      <div className="text-xs font-bold text-indigo-700 bg-indigo-50 px-2 py-1 rounded-md inline-block font-mono">
-                        {p.masaKerja || '01 Tahun 00 Bulan'}
                       </div>
                     </td>
                     <td className="p-4">
@@ -386,16 +380,6 @@ export default function PegawaiView({ pegawai, addPegawai, updatePegawai, delete
             </div>
 
             <form onSubmit={handleSubmit} className="p-5 space-y-4">
-              {/* Petunjuk Penanganan Plt / Plh */}
-              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-[11px] text-amber-900 leading-relaxed">
-                <strong>Catatan Tugas Tambahan Plt. / Plh.:</strong>
-                <ul className="list-disc pl-4 mt-1 space-y-0.5">
-                  <li>NIP pada sistem bersifat unik (1 NIP = 1 Pegawai).</li>
-                  <li><strong>Cara Recommended:</strong> Edit jabatan pegawai yang sudah ada, misalnya: <em>Analis Kebijakan / Plt. Kabag Organisasi</em>.</li>
-                  <li><strong>Atau entri terpisah:</strong> Jika ingin membuat entri khusus Plt., tambahkan akhiran pada NIP (contoh: <code>196708211986071001.PLT</code>).</li>
-                </ul>
-              </div>
-
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2 space-y-1">
                   <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider font-mono">NIP Pegawai *</label>
@@ -405,7 +389,7 @@ export default function PegawaiView({ pegawai, addPegawai, updatePegawai, delete
                     maxLength={30}
                     value={nip}
                     onChange={(e) => setNip(e.target.value.replace(/[^\w.-]/g, ''))}
-                    placeholder="Contoh: 196708211986071001 atau 196708211986071001.PLT"
+                    placeholder="Contoh: 196708211986071001"
                     className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 text-xs text-gray-700 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-mono"
                   />
                 </div>
@@ -493,7 +477,7 @@ export default function PegawaiView({ pegawai, addPegawai, updatePegawai, delete
                       <button
                         type="button"
                         onClick={() => setQrCodeUrl('')}
-                        className="text-[10px] text-red-500 hover:text-red-700 font-bold transition-all"
+                        className="text-[10px] text-red-500 hover:text-red-700 font-bold transition-all cursor-pointer"
                       >
                         Hapus QR Code
                       </button>
@@ -511,26 +495,17 @@ export default function PegawaiView({ pegawai, addPegawai, updatePegawai, delete
                       )}
                     </div>
                     <div className="flex-1 space-y-2 w-full">
-                      <p className="text-[10px] text-gray-500 leading-normal">
-                        Unggah file gambar QR Code milik pegawai yang diterbitkan oleh BKPSDM atau tempel URL gambarnya di bawah ini.
+                      <p className="text-[10px] text-gray-600 leading-normal">
+                        Unggah file gambar QR Code TTE resmi milik pegawai hasil unduhan dari BKPSDM.
                       </p>
                       
-                      <div className="flex items-center gap-2">
-                        <label className="bg-white hover:bg-gray-100 border border-gray-200 text-gray-700 px-2.5 py-1.5 rounded-md text-[10px] font-bold transition-all shadow-sm cursor-pointer flex items-center gap-1">
+                      <div>
+                        <label className="inline-flex bg-white hover:bg-gray-100 border border-gray-200 text-gray-700 px-3 py-1.5 rounded-md text-xs font-bold transition-all shadow-sm cursor-pointer items-center gap-1.5">
                           <Upload className="w-3.5 h-3.5 text-gray-500" />
-                          <span>Pilih File Gambar</span>
+                          <span>Pilih File Gambar QR Code</span>
                           <input type="file" accept="image/*" className="hidden" onChange={handleQrUpload} />
                         </label>
-                        <span className="text-[10px] text-gray-400 font-medium">atau</span>
                       </div>
-
-                      <input
-                        type="text"
-                        value={qrCodeUrl}
-                        onChange={(e) => setQrCodeUrl(e.target.value)}
-                        placeholder="Tempel URL Gambar di sini..."
-                        className="w-full bg-white border border-gray-200 rounded-lg px-2.5 py-1 text-[10px] text-gray-700 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-mono"
-                      />
                     </div>
                   </div>
                 </div>

@@ -159,11 +159,14 @@ export default function PengajuanCutiView({
   }, [jenisCuti, formJenisCutiId]);
 
   // Check if selected leave type includes holidays & weekends in its duration (Aturan BKN)
+  // Hanya Cuti Tahunan dan Cuti Alasan Penting yang tidak menghitung libur & sabtu/minggu (Hari Kerja).
+  // Cuti lainnya menggunakan hari kalender (libur, cuti bersama, sabtu dan minggu tetap dihitung).
   const selectedJenisCutiCountsHolidays = React.useMemo(() => {
     const selected = jenisCuti.find(jc => jc.id === formJenisCutiId);
     if (!selected) return false;
     const nameLower = selected.nama.toLowerCase();
-    return nameLower.includes('sakit') || nameLower.includes('melahirkan') || nameLower.includes('besar') || nameLower.includes('luar tanggungan');
+    const isHariKerjaOnly = nameLower.includes('tahunan') || nameLower.includes('alasan penting') || nameLower.includes('penting');
+    return !isHariKerjaOnly;
   }, [jenisCuti, formJenisCutiId]);
 
   // Tahun rencana pelaksanaan cuti

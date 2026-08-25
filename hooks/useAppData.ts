@@ -811,18 +811,13 @@ export function useAppData() {
   const isCountAllDays = (jcId?: string): boolean => {
     if (!jcId) return false;
     const jc = jenisCuti.find(j => j.id === jcId);
-    if (!jc) {
-      const lower = jcId.toLowerCase();
-      if (lower.includes('sakit') || lower.includes('melahirkan') || lower.includes('besar') || lower.includes('luar tanggungan')) {
-        return true;
-      }
-      return false;
-    }
-    const nameLower = jc.nama.toLowerCase();
-    if (nameLower.includes('sakit') || nameLower.includes('melahirkan') || nameLower.includes('besar') || nameLower.includes('luar tanggungan')) {
-      return true;
-    }
-    return false;
+    const nameLower = (jc ? jc.nama : jcId).toLowerCase();
+    
+    // Hanya Cuti Tahunan dan Cuti Alasan Penting yang menggunakan Hari Kerja (libur & sabtu/minggu tidak dihitung)
+    const isHariKerja = nameLower.includes('tahunan') || nameLower.includes('alasan penting') || nameLower.includes('penting');
+    
+    // Semua jenis cuti lainnya menggunakan Hari Kalender (libur, cuti bersama, sabtu dan minggu tetap dihitung)
+    return !isHariKerja;
   };
 
   const hitungHariKerja = (startStr: string, endStr: string, jenisCutiId?: string): number => {
