@@ -693,11 +693,11 @@ export default function SisaCutiView({
           <div className="bg-blue-50 p-4 rounded-xl border border-blue-100 flex items-start gap-3 text-xs text-blue-800">
             <Info className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
             <div className="space-y-1.5">
-              <p className="font-bold text-blue-950">Aturan Akumulasi Cuti Tahunan (Peraturan BKN No. 5 Tahun 2017):</p>
+              <p className="font-bold text-blue-950">Aturan Akumulasi Cuti Tahunan (Peraturan BKN No. 24 Tahun 2017):</p>
               <ul className="list-disc pl-4 space-y-1 leading-relaxed">
-                <li><strong>Cuti N (Tahun Berjalan {selectedYear}):</strong> Hak dasar 12 hari kerja per tahun.</li>
-                <li><strong>Cuti N-1 (Satu Tahun Sebelum):</strong> Maksimal akumulasi sisa kuota yang dapat dibawa adalah sisa cuti N-1 dengan ketentuan penambahan maksimal 6 hari kerja.</li>
-                <li><strong>Cuti N-2 (Dua Tahun Sebelum):</strong> Maksimal akumulasi yang masih valid dari dua tahun lalu adalah maksimal 6 hari kerja. Jika pada tahun berjalan tidak digunakan, sisa kuota N-2 akan hangus di akhir tahun.</li>
+                <li><strong>Cuti N (Tahun Berjalan {selectedYear}):</strong> Hak normal 12 hari kerja.</li>
+                <li><strong>Cuti N-1 ({selectedYear - 1}):</strong> Apabila sisa N-1 &ge; 6 hari, maka dapat diakumulasikan <strong>maksimal 6 hari</strong> ditambah N. Apabila sisa N-1 &lt; 6 hari (misal [x]), maka diakumulasikan sebesar <strong>[x] + N</strong>.</li>
+                <li><strong>Cuti N-2 ({selectedYear - 2}):</strong> Berapapun nilainya apabila sisa N-2 <strong>kurang dari 12 hari (&lt; 12)</strong>, maka <strong>HANGUS</strong> dan tidak bisa diakumulasikan ke total kuota. Sisa N-2 hanya diakumulasikan (6 hari) jika N-2 dan N-1 utuh 12 hari (tidak pernah cuti 2 tahun berturut-turut, total maksimal 24 hari).</li>
               </ul>
             </div>
           </div>
@@ -730,6 +730,7 @@ export default function SisaCutiView({
                       if (!p) return null;
                       
                       const total = hitungTotalCutiTahunan(sc);
+                      const isN2Hangus = (sc.sisaN2 < 12 || sc.sisaN1 < 12) && sc.sisaN2 > 0;
 
                       return (
                         <tr key={sc.id} className="hover:bg-gray-50/50 transition-all">
@@ -739,14 +740,28 @@ export default function SisaCutiView({
                             <div className="text-[10px] text-gray-400 font-mono">NIP. {p.nip} • {p.statusPegawai}</div>
                           </td>
                           <td className="p-4 text-center">
-                            <span className="inline-block bg-rose-50 text-rose-700 border border-rose-200 px-2.5 py-1 rounded-md text-xs font-bold font-mono shadow-sm">
-                              {sc.sisaN2} <span className="text-[10px] font-medium text-rose-500">Hari</span>
-                            </span>
+                            <div className="inline-flex flex-col items-center">
+                              <span className={`inline-block px-2.5 py-1 rounded-md text-xs font-bold font-mono shadow-sm border ${
+                                isN2Hangus ? 'bg-rose-50/60 text-rose-600 border-rose-200' : 'bg-rose-50 text-rose-700 border-rose-200'
+                              }`}>
+                                {sc.sisaN2} <span className="text-[10px] font-medium">Hari</span>
+                              </span>
+                              {isN2Hangus && (
+                                <span className="text-[9px] text-rose-600 font-semibold mt-0.5">
+                                  Hangus (&lt;12)
+                                </span>
+                              )}
+                            </div>
                           </td>
                           <td className="p-4 text-center">
-                            <span className="inline-block bg-amber-50 text-amber-700 border border-amber-200 px-2.5 py-1 rounded-md text-xs font-bold font-mono shadow-sm">
-                              {sc.sisaN1} <span className="text-[10px] font-medium text-amber-500">Hari</span>
-                            </span>
+                            <div className="inline-flex flex-col items-center">
+                              <span className="inline-block bg-amber-50 text-amber-700 border border-amber-200 px-2.5 py-1 rounded-md text-xs font-bold font-mono shadow-sm">
+                                {sc.sisaN1} <span className="text-[10px] font-medium text-amber-500">Hari</span>
+                              </span>
+                              <span className="text-[9px] text-amber-800/80 font-medium mt-0.5">
+                                {sc.sisaN1 >= 6 ? 'Diakui 6 hr' : `Diakui ${sc.sisaN1} hr`}
+                              </span>
+                            </div>
                           </td>
                           <td className="p-4 text-center">
                             <span className="inline-block bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-1 rounded-md text-xs font-bold font-mono shadow-sm">

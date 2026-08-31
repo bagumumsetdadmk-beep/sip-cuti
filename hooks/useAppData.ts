@@ -456,13 +456,22 @@ export function useAppData() {
       let lastErrorMessage = '';
       
       for (const p of pegawai) {
-        // Cek apakah pegawai ini sudah punya sisa cuti di tahun ini
-        const existing = sisaCuti.find(s => s.pegawaiId === p.id && s.tahunN === currentYear);
-        if (!existing) {
+        // Cek data sisa cuti pegawai di tahun-tahun sebelumnya
+        const existingCurrent = sisaCuti.find(s => s.pegawaiId === p.id && s.tahunN === currentYear);
+        const prevRecord = sisaCuti.find(s => s.pegawaiId === p.id && s.tahunN === (currentYear - 1));
+
+        if (!existingCurrent) {
+          // Akumulasi BKN:
+          // Sisa N-1 tahun lalu menjadi riwayat N-2
+          // Sisa N tahun lalu menjadi riwayat N-1
+          // Jatah N tahun baru = 12 hari kerja
+          const sisaN2Baru = prevRecord ? Math.max(0, prevRecord.sisaN1 || 0) : 0;
+          const sisaN1Baru = prevRecord ? Math.max(0, prevRecord.sisaN || 0) : 0;
+
           const payload = {
             pegawai_id: p.id,
-            sisa_n2: 0,
-            sisa_n1: 0,
+            sisa_n2: sisaN2Baru,
+            sisa_n1: sisaN1Baru,
             sisa_n: 12,
             tahun_n: currentYear
           };
@@ -686,10 +695,37 @@ export function useAppData() {
 
   const potongSisaCutiTahunan = async (pegawaiId: string, jumlahHari: number) => {
     const sc = sisaCuti.find(s => s.pegawaiId === pegawaiId);
-    if (!sc) return;
+    if (!sc || jumlahHari <= 0) return;
 
-    const n = sc.sisaN - jumlahHari;
-    const payload = { sisa_n: n };
+    let rem = jumlahHari;
+    let n2 = Math.max(0, sc.sisaN2 !== undefined ? sc.sisaN2 : 0);
+    let n1 = Math.max(0, sc.sisaN1 !== undefined ? sc.sisaN1 : 0);
+    let n = Math.max(0, sc.sisaN !== undefined ? sc.sisaN : 12);
+
+    // Kebijakan Pemotongan Sisa Cuti Tahunan:
+    // 1. Memotong jatah tahun berjalan (N) terlebih dahulu sampai habis (0)
+    if (n > 0 && rem > 0) {
+      const potongN = Math.min(n, rem);
+      n -= potongN;
+      rem -= potongN;
+    }
+
+    // 2. Jika jatah N sudah habis, baru memotong sisa tahun sebelumnya (N-1)
+    // Sisa N-1 yang dapat digunakan: jika sisa >= 6 hari maka maksimal 6 hari, jika < 6 hari sebesar sisa riilnya
+    if (n1 > 0 && rem > 0) {
+      const potongN1 = Math.min(n1, rem);
+      n1 -= potongN1;
+      rem -= potongN1;
+    }
+
+    // 3. Jika jatah N dan N-1 sudah habis, dan sisa N-2 memenuhi syarat (utuh 12 hari), potong N-2
+    if (n2 >= 12 && rem > 0) {
+      const potongN2 = Math.min(n2, rem);
+      n2 -= potongN2;
+      rem -= potongN2;
+    }
+
+    const payload = { sisa_n2: n2, sisa_n1: n1, sisa_n: n };
     const { data, error } = await supabase.from('sisa_cuti_tahunan').update(payload).eq('id', sc.id).select().single();
     
     if (!error && data) {
@@ -699,10 +735,33 @@ export function useAppData() {
 
   const kembalikanSisaCutiTahunan = async (pegawaiId: string, jumlahHari: number) => {
     const sc = sisaCuti.find(s => s.pegawaiId === pegawaiId);
-    if (!sc) return;
+    if (!sc || jumlahHari <= 0) return;
 
-    const n = sc.sisaN + jumlahHari;
-    const payload = { sisa_n: n };
+    let rem = jumlahHari;
+    let n2 = Math.max(0, sc.sisaN2 !== undefined ? sc.sisaN2 : 0);
+    let n1 = Math.max(0, sc.sisaN1 !== undefined ? sc.sisaN1 : 0);
+    let n = Math.max(0, sc.sisaN !== undefined ? sc.sisaN : 12);
+
+    // Urutan Pengembalian Kuota (kebalikan dari pemotongan):
+    // 1. Kembalikan ke N-2 jika sebelumnya terpotong (< 12)
+    if (n2 < 12 && rem > 0) {
+      const tambahN2 = Math.min(12 - n2, rem);
+      n2 += tambahN2;
+      rem -= tambahN2;
+    }
+    // 2. Kembalikan ke N-1 jika sebelumnya terpotong (< 12)
+    if (n1 < 12 && rem > 0) {
+      const tambahN1 = Math.min(12 - n1, rem);
+      n1 += tambahN1;
+      rem -= tambahN1;
+    }
+    // 3. Kembalikan ke N (sampai maksimal 12)
+    if (rem > 0) {
+      n = Math.min(12, n + rem);
+      rem = 0;
+    }
+
+    const payload = { sisa_n2: n2, sisa_n1: n1, sisa_n: n };
     const { data, error } = await supabase.from('sisa_cuti_tahunan').update(payload).eq('id', sc.id).select().single();
     
     if (!error && data) {
@@ -885,21 +944,29 @@ export function useAppData() {
   const hitungTotalCutiTahunan = (sc: SisaCutiTahunan | undefined): number => {
     if (!sc) return 0;    
     
-    if (sc.sisaN < 12) {
-      return sc.sisaN;
-    }
+    // Ketentuan Akumulasi Cuti Tahunan Berdasarkan Peraturan BKN No. 24/2017 & Revisi:
+    // 1. Sisa N-2:
+    //    - Berapapun nilainya jika sisanya kurang dari 12 (< 12) maka HANGUS (0) dan tidak bisa diakumulasikan.
+    //    - Hanya bisa diakumulasikan jika sisa N-2 >= 12 DAN sisa N-1 >= 12 (tidak pernah cuti 2 tahun berturut-turut), sebesar 6 hari.
+    // 2. Sisa N-1:
+    //    - Jika sisa N-1 >= 6 (misal 6, 7, 8, 9, 10, 11, 12), diakumulasikan maksimal 6 hari ke total kuota.
+    //    - Jika sisa N-1 < 6 (misal [x] < 6), diakumulasikan sebesar [x] hari ke total kuota.
+    // 3. Hak Cuti N:
+    //    - Jatah tahun berjalan (sisaN, default 12).
+    const rawN2 = sc.sisaN2 !== undefined ? sc.sisaN2 : 0;
+    const rawN1 = sc.sisaN1 !== undefined ? sc.sisaN1 : 0;
+    const rawN = sc.sisaN !== undefined ? sc.sisaN : 12;
 
-    let carryN1 = 0;
-    let carryN2 = 0;
-
-    if (sc.sisaN1 >= 12) {
-      carryN1 = 6;
-      if (sc.sisaN2 >= 12) {
-        carryN2 = 6;
-      }
-    }
+    // N-2: Hangus jika < 12 atau jika di N-1 sudah pernah ambil cuti (< 12)
+    const validN2 = (rawN2 >= 12 && rawN1 >= 12) ? 6 : 0;
     
-    return sc.sisaN + carryN1 + carryN2;
+    // N-1: Jika >= 6 maka diakui 6 hari, jika < 6 maka diakui nilai riilnya
+    const validN1 = rawN1 >= 6 ? 6 : Math.max(0, rawN1);
+    
+    // N: Sisa berjalan
+    const validN = Math.max(0, rawN);
+    
+    return Math.min(24, validN2 + validN1 + validN);
   };
 
   const hitungSisaKuotaJenisCuti = (
@@ -922,11 +989,13 @@ export function useAppData() {
       };
     }
 
-    const isTahunan = jc.nama.toLowerCase().includes('tahunan');
+    const jcNameLower = jc.nama.toLowerCase();
+    const isTahunan = jcNameLower.includes('tahunan') || jc.id === 'jc-1';
+    const isCutiBesar = jcNameLower.includes('besar');
     const countAll = isCountAllDays(jenisCutiId);
     const satuan: 'Hari Kerja' | 'Hari Kalender' = countAll ? 'Hari Kalender' : 'Hari Kerja';
 
-    // Hitung berapa hari yang sudah diambil & disetujui pada tahun tersebut
+    // Hitung berapa hari yang sudah diambil & disetujui pada tahun target untuk jenis cuti ini
     const disetujui = pengajuan.filter(pj => {
       if (excludePengajuanId && pj.id === excludePengajuanId) return false;
       if (pj.pegawaiId !== pegawaiId || pj.jenisCutiId !== jenisCutiId || pj.status !== 'Disetujui') return false;
@@ -935,10 +1004,62 @@ export function useAppData() {
     });
     const terpakai = disetujui.reduce((acc, curr) => acc + (curr.jumlahHari || 0), 0);
 
+    // Cek apakah pegawai mengambil Cuti Besar pada tahun target (Disetujui)
+    const jcBesar = jenisCuti.find(j => j.nama.toLowerCase().includes('besar'));
+    const hasCutiBesarThisYear = jcBesar ? pengajuan.some(pj => {
+      if (excludePengajuanId && pj.id === excludePengajuanId) return false;
+      if (pj.pegawaiId !== pegawaiId || pj.jenisCutiId !== jcBesar.id || pj.status !== 'Disetujui') return false;
+      const pjYear = pj.tanggalMulai ? new Date(pj.tanggalMulai).getFullYear() : targetYear;
+      return pjYear === targetYear;
+    }) : false;
+
+    // Cek berapa hari Cuti Tahunan yang sudah disetujui pada tahun target
+    const jcTahunan = jenisCuti.find(j => j.nama.toLowerCase().includes('tahunan') || j.id === 'jc-1');
+    const hariCutiTahunanTerpakai = jcTahunan ? pengajuan.filter(pj => {
+      if (excludePengajuanId && pj.id === excludePengajuanId) return false;
+      if (pj.pegawaiId !== pegawaiId || pj.jenisCutiId !== jcTahunan.id || pj.status !== 'Disetujui') return false;
+      const pjYear = pj.tanggalMulai ? new Date(pj.tanggalMulai).getFullYear() : targetYear;
+      return pjYear === targetYear;
+    }).reduce((acc, curr) => acc + (curr.jumlahHari || 0), 0) : 0;
+
     if (isTahunan) {
       const sc = sisaCuti.find(s => s.pegawaiId === pegawaiId);
+      const rawN2 = sc?.sisaN2 !== undefined ? sc.sisaN2 : 0;
+      const rawN1 = sc?.sisaN1 !== undefined ? sc.sisaN1 : 0;
+      const rawN = sc?.sisaN !== undefined ? sc.sisaN : 12;
+
+      const validN2 = (rawN2 >= 12 && rawN1 >= 12) ? 6 : 0;
+      const validN1 = rawN1 >= 6 ? 6 : Math.max(0, rawN1);
+      const validN = Math.max(0, rawN);
+      
+      // Jika PNS telah menggunakan Cuti Besar pada tahun berjalan:
+      // PNS tidak berhak atas cuti tahunan berjalan (sisa N = 0), namun tetap berhak atas sisa akumulasi N-1 dan N-2
+      if (hasCutiBesarThisYear) {
+        const totalAkumulasiSebelumnya = validN2 + validN1;
+        const sisa = Math.max(0, totalAkumulasiSebelumnya - terpakai);
+        
+        return {
+          jenisCutiId: jc.id,
+          namaJenis: jc.nama,
+          kuotaAwal: totalAkumulasiSebelumnya,
+          terpakai,
+          sisa,
+          satuan,
+          keterangan: `Hak cuti tahunan N gugur karena mengambil Cuti Besar. Hanya sisa N-1 (${validN1} hari) & N-2 (${validN2} hari) yang dapat digunakan.`
+        };
+      }
+
       const totalSisa = hitungTotalCutiTahunan(sc);
       const kuotaAwal = totalSisa + terpakai;
+
+      let keterangan = `N: ${validN} hr, N-1: ${validN1} hr (sisa riil ${rawN1} hr)`;
+      if (validN2 > 0) {
+        keterangan += `, N-2: ${validN2} hr (Akumulasi 2 Thn)`;
+      } else if (rawN2 > 0) {
+        keterangan += `, N-2: Hangus (sisa ${rawN2} hr < 12)`;
+      }
+      keterangan += `. Total kuota: ${totalSisa} hari kerja.`;
+
       return {
         jenisCutiId: jc.id,
         namaJenis: jc.nama,
@@ -946,11 +1067,40 @@ export function useAppData() {
         terpakai,
         sisa: totalSisa,
         satuan,
-        keterangan: sc ? `N-2: ${sc.sisaN2}, N-1: ${sc.sisaN1}, N: ${sc.sisaN}` : 'Default 12 hari'
+        keterangan
+      };
+    } else if (isCutiBesar) {
+      // Kuota standar Cuti Besar: 3 bulan (90 hari kalender)
+      const baseKuota = jc.kuotaDefault || 90;
+      
+      // Aturan BKN: Jika sudah terlanjur menggunakan cuti tahunan berjalan, jangka waktu cuti besar dikurangi hari cuti tahunan yang digunakan
+      const kuotaDisesuaikan = Math.max(0, baseKuota - hariCutiTahunanTerpakai);
+      const sisa = Math.max(0, kuotaDisesuaikan - terpakai);
+
+      let ket = 'Tidak dapat diakumulasikan (Maksimal 3 bulan / 90 hari, sisa kuota hangus). Mengambil cuti besar menggugurkan jatah cuti tahunan N.';
+      if (hariCutiTahunanTerpakai > 0) {
+        ket = `Kuota dikurangi ${hariCutiTahunanTerpakai} hari (sisa kuota: ${kuotaDisesuaikan} hari) karena telah menggunakan cuti tahunan berjalan. Sisa tidak dapat diakumulasikan.`;
+      }
+
+      return {
+        jenisCutiId: jc.id,
+        namaJenis: jc.nama,
+        kuotaAwal: kuotaDisesuaikan,
+        terpakai,
+        sisa,
+        satuan,
+        keterangan: ket
       };
     } else {
+      // Cuti Sakit, Cuti Melahirkan, Cuti Alasan Penting, CLTN (Tidak Dapat Diakumulasikan / Sisa Hangus)
       const kuotaAwal = jc.kuotaDefault || 0;
       const sisa = Math.max(0, kuotaAwal - terpakai);
+      
+      let note = 'Tidak dapat diakumulasikan ke tahun berikutnya (Sisa hangus). Diberikan per kejadian/permohonan sesuai batas regulasi BKN.';
+      if (jc.keterangan) {
+        note = `${jc.keterangan}. Sisa kuota tidak dapat diakumulasikan ke tahun berikutnya.`;
+      }
+
       return {
         jenisCutiId: jc.id,
         namaJenis: jc.nama,
@@ -958,7 +1108,7 @@ export function useAppData() {
         terpakai,
         sisa,
         satuan,
-        keterangan: jc.keterangan || `Kuota maksimal ${kuotaAwal} hari per tahun`
+        keterangan: note
       };
     }
   };

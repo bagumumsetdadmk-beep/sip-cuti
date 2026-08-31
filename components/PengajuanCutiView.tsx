@@ -52,6 +52,7 @@ interface PengajuanCutiViewProps {
   hitungHariKerja: (start: string, end: string, jenisCutiId?: string) => number;
   hitungTanggalSelesai: (start: string, days: number, jenisCutiId?: string) => string;
   hitungTotalCutiTahunan: (sc: SisaCutiTahunan | undefined) => number;
+  hitungSisaKuotaJenisCuti?: (pegawaiId: string, jenisCutiId: string, tahun?: number, excludePengajuanId?: string) => any;
   isApprovalPage?: boolean;
 }
 
@@ -69,6 +70,7 @@ export default function PengajuanCutiView({
   hitungHariKerja,
   hitungTanggalSelesai,
   hitungTotalCutiTahunan,
+  hitungSisaKuotaJenisCuti,
   isApprovalPage = false
 }: PengajuanCutiViewProps) {
   const { showToast } = useToast();
@@ -176,17 +178,45 @@ export default function PengajuanCutiView({
     return new Date().getFullYear();
   }, [formMulai, formTanggalPengajuan]);
 
-  // Perhitungan Sisa Kuota Realtime untuk Seluruh Jenis Cuti
+  // Perhitungan Sisa Kuota Realtime untuk Seluruh Jenis Cuti berdasarkan Aturan BKN
   const selectedQuotaInfo = React.useMemo(() => {
     if (!formPegawaiId || !formJenisCutiId) return null;
     const jc = jenisCuti.find(j => j.id === formJenisCutiId);
     if (!jc) return null;
 
+    if (hitungSisaKuotaJenisCuti) {
+      const detail = hitungSisaKuotaJenisCuti(formPegawaiId, formJenisCutiId, currentLeaveYear, editingId);
+      const sc = sisaCuti.find(s => s.pegawaiId === formPegawaiId);
+      const isTahunan = jc.nama.toLowerCase().includes('tahunan') || jc.id === 'jc-1';
+      const isBesar = jc.nama.toLowerCase().includes('besar');
+
+      const rawN2 = sc?.sisaN2 !== undefined ? sc.sisaN2 : 0;
+      const rawN1 = sc?.sisaN1 !== undefined ? sc.sisaN1 : 0;
+      const rawN = sc?.sisaN !== undefined ? sc.sisaN : 12;
+
+      const validN2 = (rawN2 >= 12 && rawN1 >= 12) ? 6 : 0;
+      const validN1 = rawN1 >= 6 ? 6 : Math.max(0, rawN1);
+      const validN = Math.max(0, rawN);
+
+      return {
+        ...detail,
+        isTahunan,
+        isBesar,
+        sisaN2: validN2,
+        sisaN1: validN1,
+        sisaN: validN,
+        rawSisaN2: rawN2,
+        rawSisaN1: rawN1,
+        nama: jc.nama
+      };
+    }
+
     const isTahunan = jc.nama.toLowerCase().includes('tahunan') || jc.id === 'jc-1';
+    const isBesar = jc.nama.toLowerCase().includes('besar');
     
     // Hitung hari yang sudah terpakai (disetujui) pada tahun target
     const disetujui = pengajuan.filter(pj => {
-      if (editingId && pj.id === editingId) return false; // exclude pengajuan yang sedang diedit
+      if (editingId && pj.id === editingId) return false;
       if (pj.pegawaiId !== formPegawaiId || pj.jenisCutiId !== formJenisCutiId || pj.status !== 'Disetujui') return false;
       const pjYear = pj.tanggalMulai ? new Date(pj.tanggalMulai).getFullYear() : currentLeaveYear;
       return pjYear === currentLeaveYear;
@@ -195,32 +225,46 @@ export default function PengajuanCutiView({
 
     if (isTahunan) {
       const sc = sisaCuti.find(s => s.pegawaiId === formPegawaiId);
+      const rawN2 = sc?.sisaN2 !== undefined ? sc.sisaN2 : 0;
+      const rawN1 = sc?.sisaN1 !== undefined ? sc.sisaN1 : 0;
+      const rawN = sc?.sisaN !== undefined ? sc.sisaN : 12;
+
+      const validN2 = (rawN2 >= 12 && rawN1 >= 12) ? 6 : 0;
+      const validN1 = rawN1 >= 6 ? 6 : Math.max(0, rawN1);
+      const validN = Math.max(0, rawN);
+
       const totalSisa = hitungTotalCutiTahunan(sc);
       const kuotaAwal = totalSisa + terpakai;
       return {
         isTahunan: true,
+        isBesar: false,
         kuotaAwal,
         terpakai,
         sisa: totalSisa,
-        sisaN2: sc?.sisaN2 || 0,
-        sisaN1: sc?.sisaN1 || 0,
-        sisaN: sc?.sisaN || 12,
+        sisaN2: validN2,
+        sisaN1: validN1,
+        sisaN: validN,
+        rawSisaN2: rawN2,
+        rawSisaN1: rawN1,
         satuan: 'Hari Kerja' as const,
-        nama: jc.nama
+        nama: jc.nama,
+        keterangan: 'Dapat Diakumulasikan (Maks 24 Hari)'
       };
     } else {
       const kuotaAwal = jc.kuotaDefault || 0;
       const sisa = Math.max(0, kuotaAwal - terpakai);
       return {
         isTahunan: false,
+        isBesar,
         kuotaAwal,
         terpakai,
         sisa,
         satuan: selectedJenisCutiCountsHolidays ? ('Hari Kalender' as const) : ('Hari Kerja' as const),
-        nama: jc.nama
+        nama: jc.nama,
+        keterangan: 'Tidak Dapat Diakumulasikan (Sisa Hangus)'
       };
     }
-  }, [formPegawaiId, formJenisCutiId, currentLeaveYear, jenisCuti, pengajuan, sisaCuti, editingId, hitungTotalCutiTahunan, selectedJenisCutiCountsHolidays]);
+  }, [formPegawaiId, formJenisCutiId, currentLeaveYear, jenisCuti, pengajuan, sisaCuti, editingId, hitungTotalCutiTahunan, hitungSisaKuotaJenisCuti, selectedJenisCutiCountsHolidays]);
 
   // Reset Jenis Cuti jika yang terpilih tidak lagi tersedia untuk pegawai tersebut
   useEffect(() => {
@@ -1173,45 +1217,72 @@ export default function PengajuanCutiView({
                 <div className="col-span-2 bg-slate-50 border border-slate-200 rounded-xl p-4">
                   {selectedQuotaInfo ? (
                     selectedQuotaInfo.isTahunan ? (
-                      <div>
-                        <div className="flex items-center justify-between gap-2 mb-3 text-slate-700 font-bold text-[11px] tracking-wide">
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between gap-2 text-slate-700 font-bold text-[11px] tracking-wide">
                           <div className="flex items-center gap-2">
                             <Scale className="w-4 h-4 text-blue-600" />
-                            <span>SISA KUOTA CUTI TAHUNAN ({currentLeaveYear - 2}, {currentLeaveYear - 1}, {currentLeaveYear}):</span>
+                            <span>STATUS AKUMULASI CUTI TAHUNAN ({currentLeaveYear - 2}, {currentLeaveYear - 1}, {currentLeaveYear}):</span>
                           </div>
-                          <span className="text-xs bg-blue-100 text-blue-800 font-bold px-2 py-0.5 rounded-full">
-                            Total Sisa: {selectedQuotaInfo.sisa} Hari Kerja
+                          <span className="text-xs bg-blue-100 text-blue-800 font-bold px-2.5 py-0.5 rounded-full border border-blue-200">
+                            Total Kuota Tersedia: {selectedQuotaInfo.sisa} Hari Kerja
                           </span>
                         </div>
                         <div className="grid grid-cols-3 gap-3">
                           <div className="bg-[#FFF9E6] border border-[#FDEB8D] rounded-lg p-3 text-center">
-                            <div className="text-[10px] font-bold text-[#A85800] uppercase mb-1">SISA {currentLeaveYear - 2}</div>
-                            <div className="text-xl font-black text-[#8A4600]">{selectedQuotaInfo.sisaN2} Hari</div>
+                            <div className="text-[10px] font-bold text-[#A85800] uppercase mb-0.5">SISA {currentLeaveYear - 2} (N-2)</div>
+                            <div className="text-xl font-black text-[#8A4600]">{selectedQuotaInfo.sisaN2} <span className="text-xs font-normal">Hari</span></div>
+                            <div className="text-[9px] text-[#A85800]/90 mt-0.5">
+                              {selectedQuotaInfo.sisaN2 > 0 
+                                ? 'Diakui 6 hari (Utuh 2 thn)' 
+                                : selectedQuotaInfo.rawSisaN2 > 0 
+                                  ? `Hangus (${selectedQuotaInfo.rawSisaN2} hr < 12)` 
+                                  : '0 hari (Tidak ada sisa)'}
+                            </div>
                           </div>
                           <div className="bg-[#E6F8F0] border border-[#A6E8C3] rounded-lg p-3 text-center">
-                            <div className="text-[10px] font-bold text-[#006037] uppercase mb-1">SISA {currentLeaveYear - 1}</div>
-                            <div className="text-xl font-black text-[#004729]">{selectedQuotaInfo.sisaN1} Hari</div>
+                            <div className="text-[10px] font-bold text-[#006037] uppercase mb-0.5">SISA {currentLeaveYear - 1} (N-1)</div>
+                            <div className="text-xl font-black text-[#004729]">{selectedQuotaInfo.sisaN1} <span className="text-xs font-normal">Hari</span></div>
+                            <div className="text-[9px] text-[#006037]/90 mt-0.5">
+                              {selectedQuotaInfo.rawSisaN1 >= 6 
+                                ? `Maks. 6 hari (sisa riil ${selectedQuotaInfo.rawSisaN1} hr)` 
+                                : `Diakui riil (${selectedQuotaInfo.rawSisaN1} hr)`}
+                            </div>
                           </div>
                           <div className="bg-[#EBF3FF] border border-[#A8C7FA] rounded-lg p-3 text-center">
-                            <div className="text-[10px] font-bold text-[#00388F] uppercase mb-1">KUOTA {currentLeaveYear}</div>
-                            <div className="text-xl font-black text-[#002766]">{selectedQuotaInfo.sisaN} Hari</div>
+                            <div className="text-[10px] font-bold text-[#00388F] uppercase mb-0.5">KUOTA {currentLeaveYear} (N)</div>
+                            <div className="text-xl font-black text-[#002766]">{selectedQuotaInfo.sisaN} <span className="text-xs font-normal">Hari</span></div>
+                            <div className="text-[9px] text-[#00388F]/80 mt-0.5">Hak tahun berjalan</div>
+                          </div>
+                        </div>
+                        <div className="text-[10px] text-blue-800 bg-blue-50/80 p-2.5 rounded-lg border border-blue-100 flex items-start gap-2 font-mono">
+                          <Info className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+                          <div className="space-y-0.5">
+                            <div><strong>Ketentuan Akumulasi Cuti Tahunan (Peraturan BKN No. 24/2017):</strong></div>
+                            <div>• <strong>N-2</strong>: Berapapun sisanya jika &lt; 12 hari maka <em>HANGUS</em>. Hanya diakumulasikan jika sisa N-2 &amp; N-1 utuh 12 hari (diakui 6 hari).</div>
+                            <div>• <strong>N-1</strong>: Sisa &ge; 6 hari diakumulasikan maks. 6 hari. Sisa &lt; 6 hari diakumulasikan sebesar nilai sisa riilnya.</div>
+                            <div>• <strong>N</strong>: Jatah normal tahun berjalan (12 hari kerja). Total akumulasi maksimal 24 hari kerja.</div>
                           </div>
                         </div>
                       </div>
                     ) : (
-                      <div>
-                        <div className="flex items-center justify-between gap-2 mb-3 text-slate-700 font-bold text-[11px] tracking-wide">
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between gap-2 text-slate-700 font-bold text-[11px] tracking-wide">
                           <div className="flex items-center gap-2">
                             <Scale className="w-4 h-4 text-emerald-600" />
                             <span>STATUS KUOTA {selectedQuotaInfo.nama.toUpperCase()} (TAHUN {currentLeaveYear}):</span>
                           </div>
-                          <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${selectedQuotaInfo.sisa > 0 ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'}`}>
-                            Sisa: {selectedQuotaInfo.sisa} {selectedQuotaInfo.satuan}
-                          </span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-200 text-slate-700 font-mono">
+                              Tidak Dapat Diakumulasikan
+                            </span>
+                            <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full ${selectedQuotaInfo.sisa > 0 ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' : 'bg-red-100 text-red-800 border border-red-200'}`}>
+                              Sisa: {selectedQuotaInfo.sisa} {selectedQuotaInfo.satuan}
+                            </span>
+                          </div>
                         </div>
                         <div className="grid grid-cols-3 gap-3">
                           <div className="bg-slate-100 border border-slate-200 rounded-lg p-2.5 text-center">
-                            <div className="text-[10px] font-bold text-slate-600 uppercase mb-0.5">KUOTA AWAL/THN</div>
+                            <div className="text-[10px] font-bold text-slate-600 uppercase mb-0.5">KUOTA DASAR/BATAS</div>
                             <div className="text-lg font-black text-slate-800">{selectedQuotaInfo.kuotaAwal} {selectedQuotaInfo.satuan.includes('Kalender') ? 'HK' : 'Hari'}</div>
                           </div>
                           <div className="bg-amber-50 border border-amber-200 rounded-lg p-2.5 text-center">
@@ -1219,10 +1290,16 @@ export default function PengajuanCutiView({
                             <div className="text-lg font-black text-amber-900">{selectedQuotaInfo.terpakai} {selectedQuotaInfo.satuan.includes('Kalender') ? 'HK' : 'Hari'}</div>
                           </div>
                           <div className={`border rounded-lg p-2.5 text-center ${selectedQuotaInfo.sisa > 0 ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200'}`}>
-                            <div className={`text-[10px] font-bold uppercase mb-0.5 ${selectedQuotaInfo.sisa > 0 ? 'text-emerald-700' : 'text-red-700'}`}>SISA TERSEDIA</div>
+                            <div className={`text-[10px] font-bold uppercase mb-0.5 ${selectedQuotaInfo.sisa > 0 ? 'text-emerald-700' : 'text-red-700'}`}>SISA DAPAT DIAJUKAN</div>
                             <div className={`text-lg font-black ${selectedQuotaInfo.sisa > 0 ? 'text-emerald-900' : 'text-red-900'}`}>{selectedQuotaInfo.sisa} {selectedQuotaInfo.satuan.includes('Kalender') ? 'HK' : 'Hari'}</div>
                           </div>
                         </div>
+                        {selectedQuotaInfo.keterangan && (
+                          <div className="text-[10px] text-amber-800 bg-amber-50/80 p-2 rounded-lg border border-amber-200 flex items-start gap-1.5 font-mono">
+                            <Info className="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" />
+                            <span>{selectedQuotaInfo.keterangan}</span>
+                          </div>
+                        )}
                       </div>
                     )
                   ) : (

@@ -174,6 +174,7 @@ export default function Home() {
             hitungHariKerja={hitungHariKerja}
             hitungTanggalSelesai={hitungTanggalSelesai}
             hitungTotalCutiTahunan={hitungTotalCutiTahunan}
+            hitungSisaKuotaJenisCuti={hitungSisaKuotaJenisCuti}
             isApprovalPage={false}
           />
         );
@@ -193,6 +194,7 @@ export default function Home() {
             hitungHariKerja={hitungHariKerja}
             hitungTanggalSelesai={hitungTanggalSelesai}
             hitungTotalCutiTahunan={hitungTotalCutiTahunan}
+            hitungSisaKuotaJenisCuti={hitungSisaKuotaJenisCuti}
             isApprovalPage={true}
           />
         );
