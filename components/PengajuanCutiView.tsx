@@ -206,9 +206,13 @@ export default function PengajuanCutiView({
         ...detail,
         isTahunan,
         isBesar,
-        sisaN2: validN2,
-        sisaN1: validN1,
-        sisaN: validN,
+        hasCutiBesarThisYear: detail.hasCutiBesarThisYear,
+        isBesarSudahDiambil: detail.isBesarSudahDiambil || (isBesar && (detail.hasCutiBesarThisYear || detail.terpakai > 0)),
+        hariCutiTahunanTerpakai: detail.hariCutiTahunanTerpakai,
+        kuotaDisesuaikan: detail.kuotaDisesuaikan,
+        sisaN2: detail.hasCutiBesarThisYear ? 0 : validN2,
+        sisaN1: detail.hasCutiBesarThisYear ? 0 : validN1,
+        sisaN: detail.hasCutiBesarThisYear ? 0 : validN,
         rawSisaN2: rawN2,
         rawSisaN1: rawN1,
         nama: jc.nama
@@ -227,7 +231,44 @@ export default function PengajuanCutiView({
     });
     const terpakai = disetujui.reduce((acc, curr) => acc + (curr.jumlahHari || 0), 0);
 
+    // Cek apakah pegawai telah mengambil Cuti Besar pada tahun berjalan
+    const jcBesar = jenisCuti.find(j => j.nama.toLowerCase().includes('besar'));
+    const hasCutiBesarThisYear = jcBesar ? pengajuan.some(pj => {
+      if (editingId && pj.id === editingId) return false;
+      if (pj.pegawaiId !== formPegawaiId || pj.jenisCutiId !== jcBesar.id || pj.status !== 'Disetujui') return false;
+      const pjYear = pj.tanggalMulai ? new Date(pj.tanggalMulai).getFullYear() : currentLeaveYear;
+      return pjYear === currentLeaveYear;
+    }) : false;
+
+    // Cek hari Cuti Tahunan yang sudah diambil pada tahun berjalan
+    const jcTahunan = jenisCuti.find(j => j.nama.toLowerCase().includes('tahunan') || j.id === 'jc-1');
+    const hariCutiTahunanTerpakai = jcTahunan ? pengajuan.filter(pj => {
+      if (editingId && pj.id === editingId) return false;
+      if (pj.pegawaiId !== formPegawaiId || pj.jenisCutiId !== jcTahunan.id || pj.status !== 'Disetujui') return false;
+      const pjYear = pj.tanggalMulai ? new Date(pj.tanggalMulai).getFullYear() : currentLeaveYear;
+      return pjYear === currentLeaveYear;
+    }).reduce((acc, curr) => acc + (curr.jumlahHari || 0), 0) : 0;
+
     if (isTahunan) {
+      if (hasCutiBesarThisYear) {
+        return {
+          isTahunan: true,
+          isBesar: false,
+          hasCutiBesarThisYear: true,
+          kuotaAwal: 0,
+          terpakai,
+          sisa: 0,
+          sisaN2: 0,
+          sisaN1: 0,
+          sisaN: 0,
+          rawSisaN2: 0,
+          rawSisaN1: 0,
+          satuan: 'Hari Kerja' as const,
+          nama: jc.nama,
+          keterangan: `TIDAK BERHAK: Pegawai telah mengambil Cuti Besar pada tahun berjalan (${currentLeaveYear}). Hak Cuti Tahunan gugur.`
+        };
+      }
+
       const sc = sisaCuti.find(s => s.pegawaiId === formPegawaiId);
       const rawN2 = sc?.sisaN2 !== undefined ? sc.sisaN2 : 0;
       const rawN1 = sc?.sisaN1 !== undefined ? sc.sisaN1 : 0;
@@ -242,6 +283,7 @@ export default function PengajuanCutiView({
       return {
         isTahunan: true,
         isBesar: false,
+        hasCutiBesarThisYear: false,
         kuotaAwal,
         terpakai,
         sisa: totalSisa,
@@ -254,12 +296,35 @@ export default function PengajuanCutiView({
         nama: jc.nama,
         keterangan: 'Dapat Diakumulasikan (Maks 24 Hari)'
       };
+    } else if (isBesar) {
+      const baseKuota = jc.kuotaDefault || 90;
+      const kuotaDisesuaikan = Math.max(0, baseKuota - hariCutiTahunanTerpakai);
+      const isBesarSudahDiambil = hasCutiBesarThisYear || terpakai > 0;
+      const sisa = isBesarSudahDiambil ? 0 : kuotaDisesuaikan;
+      return {
+        isTahunan: false,
+        isBesar: true,
+        hasCutiBesarThisYear: isBesarSudahDiambil,
+        isBesarSudahDiambil,
+        kuotaAwal: kuotaDisesuaikan,
+        terpakai,
+        sisa,
+        hariCutiTahunanTerpakai,
+        kuotaDisesuaikan,
+        satuan: selectedJenisCutiCountsHolidays ? ('Hari Kalender' as const) : ('Hari Kerja' as const),
+        nama: jc.nama,
+        keterangan: isBesarSudahDiambil
+          ? `TIDAK DAPAT DIAMBIL LAGI: Pegawai telah mengambil Cuti Besar sebanyak ${terpakai} hari pada tahun berjalan (${currentLeaveYear}). Sesuai ketentuan BKN, Cuti Besar hanya dapat diambil 1 kali dalam setahun (sisa kuota hangus).`
+          : hariCutiTahunanTerpakai > 0
+            ? `Kuota Cuti Besar awal (90 hari) dipotong ${hariCutiTahunanTerpakai} hari Cuti Tahunan yang telah diambil pada tahun berjalan.`
+            : 'Tidak Dapat Diakumulasikan (Maks 90 Hari, hanya dapat diambil 1 kali dalam setahun)'
+      };
     } else {
       const kuotaAwal = jc.kuotaDefault || 0;
       const sisa = Math.max(0, kuotaAwal - terpakai);
       return {
         isTahunan: false,
-        isBesar,
+        isBesar: false,
         kuotaAwal,
         terpakai,
         sisa,
@@ -472,11 +537,36 @@ export default function PengajuanCutiView({
 
     // Validasi Sisa Kuota untuk SELURUH Jenis Cuti
     if (selectedQuotaInfo) {
-      if (formHari > selectedQuotaInfo.sisa) {
+      // Validasi Khusus Regulasi BKN: Cuti Tahunan ditolak jika sudah mengambil Cuti Besar pada tahun berjalan
+      if (selectedQuotaInfo.isTahunan && selectedQuotaInfo.hasCutiBesarThisYear) {
         showToast(
-          `Sisa kuota untuk ${selectedQuotaInfo.nama} tidak mencukupi! Durasi pengajuan: ${formHari} ${selectedQuotaInfo.satuan}, sedangkan sisa kuota yang tersedia pada tahun ${currentLeaveYear} adalah ${selectedQuotaInfo.sisa} ${selectedQuotaInfo.satuan}.`, 
+          `Pengajuan Cuti Tahunan ditolak: Pegawai telah mengambil Cuti Besar pada tahun ${currentLeaveYear}. Sesuai Peraturan BKN No. 24/2017 Pasal 15 ayat (2), PNS yang telah menggunakan hak cuti besar tidak berhak lagi atas cuti tahunan pada tahun berjalan (Hak cuti tahunan gugur).`,
           'error'
         );
+        return;
+      }
+
+      // Validasi Khusus Regulasi BKN: Cuti Besar hanya boleh diambil 1 kali dalam 1 tahun berjalan
+      if (selectedQuotaInfo.isBesar && (selectedQuotaInfo.hasCutiBesarThisYear || selectedQuotaInfo.isBesarSudahDiambil || selectedQuotaInfo.terpakai > 0)) {
+        showToast(
+          `Pengajuan Cuti Besar ditolak: Pegawai telah mengambil Cuti Besar pada tahun ${currentLeaveYear}. Sesuai ketentuan BKN & PP No. 11/2017, Cuti Besar hanya dapat diambil 1 (satu) kali dalam 1 tahun berjalan.`,
+          'error'
+        );
+        return;
+      }
+
+      if (formHari > selectedQuotaInfo.sisa) {
+        if (selectedQuotaInfo.isBesar && selectedQuotaInfo.hariCutiTahunanTerpakai && selectedQuotaInfo.hariCutiTahunanTerpakai > 0) {
+          showToast(
+            `Pengajuan Cuti Besar (${formHari} hari) melebihi batas kuota yang tersedia (${selectedQuotaInfo.sisa} hari). Kuota Cuti Besar awal (90 hari) telah dipotong ${selectedQuotaInfo.hariCutiTahunanTerpakai} hari Cuti Tahunan yang telah diambil pada tahun ${currentLeaveYear}.`,
+            'error'
+          );
+        } else {
+          showToast(
+            `Sisa kuota untuk ${selectedQuotaInfo.nama} tidak mencukupi! Durasi pengajuan: ${formHari} ${selectedQuotaInfo.satuan}, sedangkan sisa kuota yang tersedia pada tahun ${currentLeaveYear} adalah ${selectedQuotaInfo.sisa} ${selectedQuotaInfo.satuan}.`, 
+            'error'
+          );
+        }
         return;
       }
     }
@@ -764,6 +854,52 @@ export default function PengajuanCutiView({
             if (targetPegawai.statusPegawai !== 'PNS' && (targetJenis.hakPegawai === 'PNS' || targetJenis.nama.toLowerCase().includes('penting') || targetJenis.nama.toLowerCase().includes('besar') || targetJenis.nama.toLowerCase().includes('tanggungan'))) {
               failCount++;
               continue;
+            }
+
+            // Validasi Regulasi BKN: Cuti Besar vs Cuti Tahunan
+            const targetJenisLower = targetJenis.nama.toLowerCase();
+            const isImportTahunan = targetJenisLower.includes('tahunan') || targetJenis.id === 'jc-1';
+            const isImportBesar = targetJenisLower.includes('besar');
+            const targetYearImport = new Date(formattedMulai).getFullYear();
+
+            if (isImportTahunan) {
+              const hasCB = pengajuan.some(pj => 
+                pj.pegawaiId === targetPegawai.id && 
+                (pj.jenisCutiId === 'jc-5' || jenisCuti.find(j => j.id === pj.jenisCutiId)?.nama.toLowerCase().includes('besar')) &&
+                pj.status === 'Disetujui' &&
+                (pj.tanggalMulai ? new Date(pj.tanggalMulai).getFullYear() : targetYearImport) === targetYearImport
+              );
+              if (hasCB) {
+                failCount++;
+                continue;
+              }
+            }
+
+            if (isImportBesar) {
+              // Cuti Besar hanya boleh diambil 1 kali dalam 1 tahun berjalan
+              const alreadyTookBesar = pengajuan.some(pj => 
+                pj.pegawaiId === targetPegawai.id && 
+                (pj.jenisCutiId === targetJenis.id || pj.jenisCutiId === 'jc-5' || jenisCuti.find(j => j.id === pj.jenisCutiId)?.nama.toLowerCase().includes('besar')) &&
+                pj.status === 'Disetujui' &&
+                (pj.tanggalMulai ? new Date(pj.tanggalMulai).getFullYear() : targetYearImport) === targetYearImport
+              );
+              if (alreadyTookBesar) {
+                failCount++;
+                continue;
+              }
+
+              const thnTaken = pengajuan.filter(pj => 
+                pj.pegawaiId === targetPegawai.id && 
+                (pj.jenisCutiId === 'jc-1' || jenisCuti.find(j => j.id === pj.jenisCutiId)?.nama.toLowerCase().includes('tahunan')) &&
+                pj.status === 'Disetujui' &&
+                (pj.tanggalMulai ? new Date(pj.tanggalMulai).getFullYear() : targetYearImport) === targetYearImport
+              ).reduce((acc, curr) => acc + (curr.jumlahHari || 0), 0);
+
+              const maxBesar = Math.max(0, (targetJenis.kuotaDefault || 90) - thnTaken);
+              if (days > maxBesar) {
+                failCount++;
+                continue;
+              }
             }
 
             await addPengajuan({
@@ -1222,9 +1358,39 @@ export default function PengajuanCutiView({
                     onChange={(e) => setFormJenisCutiId(e.target.value)}
                     className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 text-xs text-gray-700 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all cursor-pointer"
                   >
-                    {filteredJenisCuti.map(jc => (
-                      <option key={jc.id} value={jc.id}>{jc.nama} ({jc.kuotaDefault} Hari)</option>
-                    ))}
+                    {filteredJenisCuti.map(jc => {
+                      const isTahunanItem = jc.nama.toLowerCase().includes('tahunan') || jc.id === 'jc-1';
+                      const isBesarItem = jc.nama.toLowerCase().includes('besar') || jc.id === 'jc-5';
+                      
+                      const jcBesarRef = jenisCuti.find(j => j.nama.toLowerCase().includes('besar') || j.id === 'jc-5');
+                      const tookCBThisYear = Boolean(
+                        jcBesarRef && pengajuan.some(pj => {
+                          if (editingId && pj.id === editingId) return false;
+                          const jcPj = jenisCuti.find(j => j.id === pj.jenisCutiId);
+                          const isPjBesar = jcPj?.nama.toLowerCase().includes('besar') || pj.jenisCutiId === 'jc-5';
+                          if (pj.pegawaiId !== formPegawaiId || !isPjBesar || pj.status !== 'Disetujui') return false;
+                          const pjYear = pj.tanggalMulai ? new Date(pj.tanggalMulai).getFullYear() : currentLeaveYear;
+                          return pjYear === currentLeaveYear;
+                        })
+                      );
+
+                      let labelExtra = '';
+                      if (isTahunanItem && tookCBThisYear) {
+                        labelExtra = ' — [TIDAK BERHAK: TELAH CUTI BESAR]';
+                      } else if (isBesarItem && tookCBThisYear) {
+                        labelExtra = ' — [TIDAK DAPAT DIAMBIL: MAKS 1X SETAHUN]';
+                      }
+
+                      return (
+                        <option 
+                          key={jc.id} 
+                          value={jc.id}
+                          disabled={tookCBThisYear && (isTahunanItem || isBesarItem)}
+                        >
+                          {jc.nama} ({jc.kuotaDefault} Hari) {labelExtra}
+                        </option>
+                      );
+                    })}
                   </select>
                 </div>
 
@@ -1232,53 +1398,65 @@ export default function PengajuanCutiView({
                 <div className="col-span-2 bg-slate-50 border border-slate-200 rounded-xl p-4">
                   {selectedQuotaInfo ? (
                     selectedQuotaInfo.isTahunan ? (
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between gap-2 text-slate-700 font-bold text-[11px] tracking-wide">
-                          <div className="flex items-center gap-2">
-                            <Scale className="w-4 h-4 text-blue-600" />
-                            <span>STATUS AKUMULASI CUTI TAHUNAN ({currentLeaveYear - 2}, {currentLeaveYear - 1}, {currentLeaveYear}):</span>
+                      selectedQuotaInfo.hasCutiBesarThisYear ? (
+                        <div className="p-4 bg-rose-50 border-2 border-rose-300 rounded-xl space-y-2 text-rose-950">
+                          <div className="flex items-center gap-2 text-rose-700 font-black text-xs uppercase tracking-wide">
+                            <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0" />
+                            <span>HAK CUTI TAHUNAN GUGUR (TELAH MENGAMBIL CUTI BESAR PADA TAHUN {currentLeaveYear})</span>
                           </div>
-                          <span className="text-xs bg-blue-100 text-blue-800 font-bold px-2.5 py-0.5 rounded-full border border-blue-200">
-                            Total Kuota Tersedia: {selectedQuotaInfo.sisa} Hari Kerja
-                          </span>
+                          <p className="text-xs text-rose-800 leading-relaxed font-sans">
+                            Berdasarkan <strong>Peraturan BKN No. 24 Tahun 2017 Pasal 15 ayat (2)</strong>: <em>&quot;PNS yang telah menggunakan hak atas cuti besar tidak berhak lagi atas cuti tahunan dalam tahun yang bersangkutan.&quot;</em>
+                          </p>
+                          <div className="bg-white/80 p-2.5 rounded-lg border border-rose-200 text-xs font-mono flex items-center justify-between">
+                            <span className="text-rose-700 font-bold">Sisa Kuota Cuti Tahunan Tahun {currentLeaveYear}:</span>
+                            <span className="bg-rose-100 text-rose-800 font-black px-3 py-1 rounded-md text-sm border border-rose-300">
+                              0 Hari Kerja (Ditiadakan)
+                            </span>
+                          </div>
+                          <div className="text-[11px] text-rose-700 font-sans">
+                            Pengajuan Cuti Tahunan untuk pegawai ini pada tahun {currentLeaveYear} <strong>tidak dapat diproses</strong> karena hak cuti tahunan ditiadakan akibat pengambilan Cuti Besar.
+                          </div>
                         </div>
-                        <div className="grid grid-cols-3 gap-3">
-                          <div className="bg-[#FFF9E6] border border-[#FDEB8D] rounded-lg p-3 text-center">
-                            <div className="text-[10px] font-bold text-[#A85800] uppercase mb-0.5">SISA {currentLeaveYear - 2} (N-2)</div>
-                            <div className="text-xl font-black text-[#8A4600]">{selectedQuotaInfo.sisaN2} <span className="text-xs font-normal">Hari</span></div>
-                            <div className="text-[9px] text-[#A85800]/90 mt-0.5">
-                              {selectedQuotaInfo.sisaN2 > 0 
-                                ? 'Diakui 6 hari (Utuh 2 thn)' 
-                                : selectedQuotaInfo.rawSisaN2 > 0 
-                                  ? `Hangus (${selectedQuotaInfo.rawSisaN2} hr < 12)` 
-                                  : '0 hari (Tidak ada sisa)'}
+                      ) : (
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between gap-2 text-slate-700 font-bold text-[11px] tracking-wide">
+                            <div className="flex items-center gap-2">
+                              <Scale className="w-4 h-4 text-blue-600" />
+                              <span>STATUS AKUMULASI CUTI TAHUNAN ({currentLeaveYear - 2}, {currentLeaveYear - 1}, {currentLeaveYear}):</span>
+                            </div>
+                            <span className="text-xs bg-blue-100 text-blue-800 font-bold px-2.5 py-0.5 rounded-full border border-blue-200">
+                              Total Kuota Tersedia: {selectedQuotaInfo.sisa} Hari Kerja
+                            </span>
+                          </div>
+                          <div className="grid grid-cols-3 gap-3">
+                            <div className="bg-[#FFF9E6] border border-[#FDEB8D] rounded-lg p-3 text-center">
+                              <div className="text-[10px] font-bold text-[#A85800] uppercase mb-0.5">SISA {currentLeaveYear - 2} (N-2)</div>
+                              <div className="text-xl font-black text-[#8A4600]">{selectedQuotaInfo.sisaN2} <span className="text-xs font-normal">Hari</span></div>
+                              <div className="text-[9px] text-[#A85800]/90 mt-0.5">
+                                {selectedQuotaInfo.sisaN2 > 0 
+                                  ? 'Diakui 6 hari (Utuh 2 thn)' 
+                                  : selectedQuotaInfo.rawSisaN2 > 0 
+                                    ? `Hangus (${selectedQuotaInfo.rawSisaN2} hr < 12)` 
+                                    : '0 hari (Tidak ada sisa)'}
+                              </div>
+                            </div>
+                            <div className="bg-[#E6F8F0] border border-[#A6E8C3] rounded-lg p-3 text-center">
+                              <div className="text-[10px] font-bold text-[#006037] uppercase mb-0.5">SISA {currentLeaveYear - 1} (N-1)</div>
+                              <div className="text-xl font-black text-[#004729]">{selectedQuotaInfo.sisaN1} <span className="text-xs font-normal">Hari</span></div>
+                              <div className="text-[9px] text-[#006037]/90 mt-0.5">
+                                {selectedQuotaInfo.rawSisaN1 >= 6 
+                                  ? `Maks. 6 hari (sisa riil ${selectedQuotaInfo.rawSisaN1} hr)` 
+                                  : `Diakui riil (${selectedQuotaInfo.rawSisaN1} hr)`}
+                              </div>
+                            </div>
+                            <div className="bg-[#EBF3FF] border border-[#A8C7FA] rounded-lg p-3 text-center">
+                              <div className="text-[10px] font-bold text-[#00388F] uppercase mb-0.5">KUOTA {currentLeaveYear} (N)</div>
+                              <div className="text-xl font-black text-[#002766]">{selectedQuotaInfo.sisaN} <span className="text-xs font-normal">Hari</span></div>
+                              <div className="text-[9px] text-[#00388F]/80 mt-0.5">Hak tahun berjalan</div>
                             </div>
                           </div>
-                          <div className="bg-[#E6F8F0] border border-[#A6E8C3] rounded-lg p-3 text-center">
-                            <div className="text-[10px] font-bold text-[#006037] uppercase mb-0.5">SISA {currentLeaveYear - 1} (N-1)</div>
-                            <div className="text-xl font-black text-[#004729]">{selectedQuotaInfo.sisaN1} <span className="text-xs font-normal">Hari</span></div>
-                            <div className="text-[9px] text-[#006037]/90 mt-0.5">
-                              {selectedQuotaInfo.rawSisaN1 >= 6 
-                                ? `Maks. 6 hari (sisa riil ${selectedQuotaInfo.rawSisaN1} hr)` 
-                                : `Diakui riil (${selectedQuotaInfo.rawSisaN1} hr)`}
-                            </div>
-                          </div>
-                          <div className="bg-[#EBF3FF] border border-[#A8C7FA] rounded-lg p-3 text-center">
-                            <div className="text-[10px] font-bold text-[#00388F] uppercase mb-0.5">KUOTA {currentLeaveYear} (N)</div>
-                            <div className="text-xl font-black text-[#002766]">{selectedQuotaInfo.sisaN} <span className="text-xs font-normal">Hari</span></div>
-                            <div className="text-[9px] text-[#00388F]/80 mt-0.5">Hak tahun berjalan</div>
-                          </div>
                         </div>
-                        <div className="text-[10px] text-blue-800 bg-blue-50/80 p-2.5 rounded-lg border border-blue-100 flex items-start gap-2 font-mono">
-                          <Info className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
-                          <div className="space-y-0.5">
-                            <div><strong>Ketentuan Akumulasi Cuti Tahunan (Peraturan BKN No. 24/2017):</strong></div>
-                            <div>• <strong>N-2</strong>: Berapapun sisanya jika &lt; 12 hari maka <em>HANGUS</em>. Hanya diakumulasikan jika sisa N-2 &amp; N-1 utuh 12 hari (diakui 6 hari).</div>
-                            <div>• <strong>N-1</strong>: Sisa &ge; 6 hari diakumulasikan maks. 6 hari. Sisa &lt; 6 hari diakumulasikan sebesar nilai sisa riilnya.</div>
-                            <div>• <strong>N</strong>: Jatah normal tahun berjalan (12 hari kerja). Total akumulasi maksimal 24 hari kerja.</div>
-                          </div>
-                        </div>
-                      </div>
+                      )
                     ) : (
                       <div className="space-y-3">
                         <div className="flex items-center justify-between gap-2 text-slate-700 font-bold text-[11px] tracking-wide">
@@ -1295,10 +1473,32 @@ export default function PengajuanCutiView({
                             </span>
                           </div>
                         </div>
+
+                        {/* Banner Khusus Pemotongan Cuti Besar jika Pernah Mengambil Cuti Tahunan */}
+                        {selectedQuotaInfo.isBesar && selectedQuotaInfo.hariCutiTahunanTerpakai && selectedQuotaInfo.hariCutiTahunanTerpakai > 0 && (
+                          <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-blue-900 text-xs flex items-start gap-2.5">
+                            <Info className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+                            <div className="space-y-1">
+                              <div className="font-bold text-blue-950">
+                                Pemotongan Kuota Cuti Besar (Peraturan BKN No. 24/2017):
+                              </div>
+                              <p className="text-blue-800 leading-relaxed font-sans">
+                                Pegawai telah mengambil <strong>Cuti Tahunan sebanyak {selectedQuotaInfo.hariCutiTahunanTerpakai} hari</strong> pada tahun {currentLeaveYear}. Sesuai regulasi BKN, kuota Cuti Besar (standar 90 hari kalender) dipotong sejumlah Cuti Tahunan yang telah diambil pada tahun berjalan:
+                              </p>
+                              <div className="font-mono text-[11px] bg-white/90 px-2.5 py-1 rounded border border-blue-200 inline-block font-bold text-blue-900 mt-0.5">
+                                90 Hari Kalender - {selectedQuotaInfo.hariCutiTahunanTerpakai} Hari Cuti Tahunan = {selectedQuotaInfo.kuotaAwal} Hari Kalender
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
                         <div className="grid grid-cols-3 gap-3">
                           <div className="bg-slate-100 border border-slate-200 rounded-lg p-2.5 text-center">
                             <div className="text-[10px] font-bold text-slate-600 uppercase mb-0.5">KUOTA DASAR/BATAS</div>
                             <div className="text-lg font-black text-slate-800">{selectedQuotaInfo.kuotaAwal} {selectedQuotaInfo.satuan.includes('Kalender') ? 'HK' : 'Hari'}</div>
+                            {selectedQuotaInfo.isBesar && selectedQuotaInfo.hariCutiTahunanTerpakai && selectedQuotaInfo.hariCutiTahunanTerpakai > 0 && (
+                              <div className="text-[9px] text-blue-700 font-medium">Standar 90 - {selectedQuotaInfo.hariCutiTahunanTerpakai} hr</div>
+                            )}
                           </div>
                           <div className="bg-amber-50 border border-amber-200 rounded-lg p-2.5 text-center">
                             <div className="text-[10px] font-bold text-amber-700 uppercase mb-0.5">TERPAKAI ({currentLeaveYear})</div>
@@ -1321,56 +1521,6 @@ export default function PengajuanCutiView({
                     <p className="text-xs text-amber-600 font-medium text-center py-2 bg-amber-50 rounded-lg border border-dashed border-amber-200">
                       Silakan pilih pegawai dan jenis cuti terlebih dahulu untuk memuat kalkulasi sisa kuota.
                     </p>
-                  )}
-                  {formJenisCutiId && (() => {
-                    const currentJc = jenisCuti.find(j => j.id === formJenisCutiId);
-                    const aturan = currentJc ? getAturanCuti(currentJc.nama) : null;
-                    if (!aturan) return null;
-
-                    return (
-                      <div className="mt-3 p-3 bg-white rounded-lg border border-slate-200 space-y-1.5 text-[11px]">
-                        <div className="flex items-center justify-between">
-                          <span className="font-bold text-slate-800 flex items-center gap-1.5 font-mono">
-                            <Scale className="w-3.5 h-3.5 text-blue-600" />
-                            <span>Sistem Pengurangan Kuota: {aturan.namaJenis}</span>
-                          </span>
-                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
-                            aturan.pengaruhCutiTahunan === 'Mengurangi Cuti Tahunan'
-                              ? 'bg-blue-50 text-blue-700 border border-blue-200'
-                              : aturan.pengaruhCutiTahunan === 'Menghilangkan Hak Cuti Tahunan'
-                                ? 'bg-rose-50 text-rose-700 border border-rose-200'
-                                : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                          }`}>
-                            {aturan.pengaruhCutiTahunan}
-                          </span>
-                        </div>
-                        <p className="text-slate-600 leading-relaxed">{aturan.sistemPengurangan}</p>
-                        <div className="text-[10px] text-slate-500 font-mono flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-slate-100">
-                          <span><strong>Hak Pegawai:</strong> <span className={aturan.hakPegawai.includes('Khusus PNS') ? 'text-blue-700 font-bold' : ''}>{aturan.hakPegawai}</span></span>
-                          <span><strong>Alur Pemotongan:</strong> {aturan.urutanPemotongan}</span>
-                          <span><strong>Satuan:</strong> {aturan.satuanHari}</span>
-                        </div>
-                      </div>
-                    );
-                  })()}
-                </div>
-
-                {/* INFO ATURAN PENGAJUAN & BATASAN 3 HARI */}
-                <div className="col-span-2">
-                  {isCutiMendadakAllowed ? (
-                    <div className="p-2.5 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-900 text-xs flex items-center gap-2">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                      <span>
-                        <strong>Pengecualian Khusus:</strong> Untuk <strong>{jenisCuti.find(jc => jc.id === formJenisCutiId)?.nama}</strong>, pengajuan dapat dilakukan pada <strong>hari H pelaksanaan cuti</strong> karena sifatnya yang mendesak/mendadak (tanpa batasan minimal 3 hari sebelumnya).
-                      </span>
-                    </div>
-                  ) : (
-                    <div className="p-2.5 bg-blue-50 border border-blue-200 rounded-lg text-blue-950 text-xs flex items-center gap-2">
-                      <Info className="w-4 h-4 text-blue-600 shrink-0" />
-                      <span>
-                        <strong>Ketentuan Batasan:</strong> Pengajuan <strong>{jenisCuti.find(jc => jc.id === formJenisCutiId)?.nama || 'Cuti'}</strong> wajib diajukan <strong>minimal 3 hari</strong> sebelum tanggal mulai pelaksanaan cuti.
-                      </span>
-                    </div>
                   )}
                 </div>
 
@@ -1710,9 +1860,16 @@ export default function PengajuanCutiView({
                 <button
                   type="submit"
                   id="btn-simpan-form-pj"
-                  className="px-4 py-2 rounded-lg text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white transition-all cursor-pointer"
+                  disabled={Boolean(selectedQuotaInfo?.isTahunan && selectedQuotaInfo?.hasCutiBesarThisYear)}
+                  className={`px-4 py-2 rounded-lg text-xs font-bold text-white transition-all ${
+                    selectedQuotaInfo?.isTahunan && selectedQuotaInfo?.hasCutiBesarThisYear
+                      ? 'bg-rose-400 cursor-not-allowed opacity-75'
+                      : 'bg-blue-600 hover:bg-blue-700 cursor-pointer shadow-sm'
+                  }`}
                 >
-                  Kirim Pengajuan
+                  {selectedQuotaInfo?.isTahunan && selectedQuotaInfo?.hasCutiBesarThisYear 
+                    ? 'Hak Gugur (Telah Cuti Besar)' 
+                    : 'Kirim Pengajuan'}
                 </button>
               </div>
             </form>

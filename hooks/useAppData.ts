@@ -1059,20 +1059,18 @@ export function useAppData() {
       const validN1 = rawN1 >= 6 ? 6 : Math.max(0, rawN1);
       const validN = Math.max(0, rawN);
       
-      // Jika PNS telah menggunakan Cuti Besar pada tahun berjalan:
-      // PNS tidak berhak atas cuti tahunan berjalan (sisa N = 0), namun tetap berhak atas sisa akumulasi N-1 dan N-2
+      // Sesuai Peraturan BKN No. 24/2017:
+      // Apabila sudah mengambil Cuti Besar maka TIDAK BERHAK mengambil Cuti Tahunan pada tahun berjalan (tahun N).
       if (hasCutiBesarThisYear) {
-        const totalAkumulasiSebelumnya = validN2 + validN1;
-        const sisa = Math.max(0, totalAkumulasiSebelumnya - terpakai);
-        
         return {
           jenisCutiId: jc.id,
           namaJenis: jc.nama,
-          kuotaAwal: totalAkumulasiSebelumnya,
+          kuotaAwal: 0,
           terpakai,
-          sisa,
+          sisa: 0,
           satuan,
-          keterangan: `Hak cuti tahunan N gugur karena mengambil Cuti Besar. Hanya sisa N-1 (${validN1} hari) & N-2 (${validN2} hari) yang dapat digunakan.`
+          hasCutiBesarThisYear: true,
+          keterangan: `TIDAK BERHAK: Pegawai telah mengambil Cuti Besar pada tahun berjalan (${targetYear}). Sesuai Peraturan BKN No. 24/2017, PNS yang telah menggunakan hak Cuti Besar tidak berhak lagi atas Cuti Tahunan dalam tahun yang bersangkutan.`
         };
       }
 
@@ -1094,19 +1092,30 @@ export function useAppData() {
         terpakai,
         sisa: totalSisa,
         satuan,
+        hasCutiBesarThisYear: false,
         keterangan
       };
     } else if (isCutiBesar) {
       // Kuota standar Cuti Besar: 3 bulan (90 hari kalender)
       const baseKuota = jc.kuotaDefault || 90;
       
-      // Aturan BKN: Jika sudah terlanjur menggunakan cuti tahunan berjalan, jangka waktu cuti besar dikurangi hari cuti tahunan yang digunakan
+      // Sesuai Peraturan BKN No. 24/2017:
+      // Apabila sudah pernah mengambil Cuti Tahunan sebelum mengambil Cuti Besar,
+      // maka kuota Cuti Besar dikurangi jumlah Cuti Tahunan yang pernah diambil pada tahun berjalan (tahun N).
       const kuotaDisesuaikan = Math.max(0, baseKuota - hariCutiTahunanTerpakai);
-      const sisa = Math.max(0, kuotaDisesuaikan - terpakai);
 
-      let ket = 'Tidak dapat diakumulasikan (Maksimal 3 bulan / 90 hari, sisa kuota hangus). Mengambil cuti besar menggugurkan jatah cuti tahunan N.';
-      if (hariCutiTahunanTerpakai > 0) {
-        ket = `Kuota dikurangi ${hariCutiTahunanTerpakai} hari (sisa kuota: ${kuotaDisesuaikan} hari) karena telah menggunakan cuti tahunan berjalan. Sisa tidak dapat diakumulasikan.`;
+      // Sesuai ketentuan BKN & PP No. 11/2017:
+      // Cuti Besar HANYA DAPAT DIAMBIL 1 (SATU) KALI DALAM 1 TAHUN BERJALAN.
+      // Apabila sudah pernah mengambil Cuti Besar pada tahun berjalan,
+      // maka pegawai tidak dapat mengambil Cuti Besar lagi di tahun tersebut (sisa kuota menjadi 0).
+      const isBesarSudahDiambil = hasCutiBesarThisYear || terpakai > 0;
+      const sisa = isBesarSudahDiambil ? 0 : kuotaDisesuaikan;
+
+      let ket = 'Tidak dapat diakumulasikan (Maksimal 3 bulan / 90 hari kalender). Cuti Besar hanya dapat diambil 1 (satu) kali dalam setahun. Mengambil Cuti Besar meniadakan hak Cuti Tahunan tahun berjalan (Tahun N).';
+      if (isBesarSudahDiambil) {
+        ket = `TIDAK DAPAT DIAMBIL LAGI: Pegawai telah mengambil Cuti Besar sebanyak ${terpakai} hari pada tahun berjalan (${targetYear}). Sesuai ketentuan BKN, Cuti Besar hanya dapat diambil 1 (satu) kali dalam 1 tahun berjalan. Sisa hak Cuti Besar tahun ini telah hangus.`;
+      } else if (hariCutiTahunanTerpakai > 0) {
+        ket = `Kuota Cuti Besar awal (90 hari kalender) dikurangi ${hariCutiTahunanTerpakai} hari Cuti Tahunan yang telah diambil pada tahun berjalan (Tahun N). Kuota efektif yang dapat diambil: ${kuotaDisesuaikan} hari (maksimal 1 kali pengambilan dalam setahun).`;
       }
 
       return {
@@ -1116,6 +1125,10 @@ export function useAppData() {
         terpakai,
         sisa,
         satuan,
+        hasCutiBesarThisYear: isBesarSudahDiambil,
+        isBesarSudahDiambil,
+        hariCutiTahunanTerpakai,
+        kuotaDisesuaikan,
         keterangan: ket
       };
     } else {

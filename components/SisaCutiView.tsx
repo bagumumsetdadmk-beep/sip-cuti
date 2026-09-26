@@ -126,7 +126,8 @@ export default function SisaCutiView({
       return { jenisCutiId: jcId, namaJenis: 'Cuti', kuotaAwal: 0, terpakai: 0, sisa: 0, satuan: 'Hari Kerja' };
     }
     const isTahunan = jc.nama.toLowerCase().includes('tahunan') || jc.id === 'jc-1';
-    const isHariKerja = jc.nama.toLowerCase().includes('tahunan') || jc.nama.toLowerCase().includes('alasan penting') || jc.nama.toLowerCase().includes('penting');
+    const isBesar = jc.nama.toLowerCase().includes('besar');
+    const isHariKerja = isTahunan || jc.nama.toLowerCase().includes('alasan penting') || jc.nama.toLowerCase().includes('penting');
     const satuan = (!isHariKerja) ? ('Hari Kalender' as const) : ('Hari Kerja' as const);
 
     const disetujui = pengajuan.filter(pj => {
@@ -136,7 +137,33 @@ export default function SisaCutiView({
     });
     const terpakai = disetujui.reduce((acc, curr) => acc + (curr.jumlahHari || 0), 0);
 
+    const jcBesar = jenisCuti.find(j => j.nama.toLowerCase().includes('besar'));
+    const hasCutiBesarThisYear = jcBesar ? pengajuan.some(pj => {
+      if (pj.pegawaiId !== pegawaiId || pj.jenisCutiId !== jcBesar.id || pj.status !== 'Disetujui') return false;
+      const pjYear = pj.tanggalMulai ? new Date(pj.tanggalMulai).getFullYear() : tahun;
+      return pjYear === tahun;
+    }) : false;
+
+    const jcTahunan = jenisCuti.find(j => j.nama.toLowerCase().includes('tahunan') || j.id === 'jc-1');
+    const hariCutiTahunanTerpakai = jcTahunan ? pengajuan.filter(pj => {
+      if (pj.pegawaiId !== pegawaiId || pj.jenisCutiId !== jcTahunan.id || pj.status !== 'Disetujui') return false;
+      const pjYear = pj.tanggalMulai ? new Date(pj.tanggalMulai).getFullYear() : tahun;
+      return pjYear === tahun;
+    }).reduce((acc, curr) => acc + (curr.jumlahHari || 0), 0) : 0;
+
     if (isTahunan) {
+      if (hasCutiBesarThisYear) {
+        return {
+          jenisCutiId: jc.id,
+          namaJenis: jc.nama,
+          kuotaAwal: 0,
+          terpakai,
+          sisa: 0,
+          satuan,
+          hasCutiBesarThisYear: true,
+          keterangan: `Hak Cuti Tahunan gugur karena mengambil Cuti Besar pada tahun ${tahun}.`
+        };
+      }
       const sc = sisaCuti.find(s => s.pegawaiId === pegawaiId);
       const totalSisa = hitungTotalCutiTahunan(sc);
       return {
@@ -146,7 +173,34 @@ export default function SisaCutiView({
         terpakai,
         sisa: totalSisa,
         satuan,
+        hasCutiBesarThisYear: false,
         keterangan: sc ? `N-2: ${sc.sisaN2}, N-1: ${sc.sisaN1}, N: ${sc.sisaN}` : 'Default 12 hari'
+      };
+    } else if (isBesar) {
+      const baseKuota = jc.kuotaDefault || 90;
+      const kuotaDisesuaikan = Math.max(0, baseKuota - hariCutiTahunanTerpakai);
+      const isBesarSudahDiambil = hasCutiBesarThisYear || terpakai > 0;
+      const sisa = isBesarSudahDiambil ? 0 : kuotaDisesuaikan;
+
+      let ket = 'Maksimal 90 hari kalender. Hanya dapat diambil 1 (satu) kali dalam 1 tahun berjalan.';
+      if (isBesarSudahDiambil) {
+        ket = `TIDAK DAPAT DIAMBIL LAGI: Pegawai telah mengambil Cuti Besar sebanyak ${terpakai} hari pada tahun ${tahun}. Sesuai ketentuan BKN, Cuti Besar hanya dapat diambil 1 kali setahun (sisa kuota hangus).`;
+      } else if (hariCutiTahunanTerpakai > 0) {
+        ket = `Kuota awal (90 hari) dipotong ${hariCutiTahunanTerpakai} hari Cuti Tahunan yang telah diambil pada tahun berjalan. Sisa tersedia: ${sisa} hari.`;
+      }
+
+      return {
+        jenisCutiId: jc.id,
+        namaJenis: jc.nama,
+        kuotaAwal: kuotaDisesuaikan,
+        terpakai,
+        sisa,
+        satuan,
+        hasCutiBesarThisYear: isBesarSudahDiambil,
+        isBesarSudahDiambil,
+        hariCutiTahunanTerpakai,
+        kuotaDisesuaikan,
+        keterangan: ket
       };
     } else {
       const kuotaAwal = jc.kuotaDefault || 0;
@@ -740,28 +794,51 @@ export default function SisaCutiView({
                             const detail = item.kuotaDetails[jc.id];
                             if (!detail) return <td key={jc.id} className="p-3.5 text-center">-</td>;
                             
+                            const isCutiBesarItem = jc.nama.toLowerCase().includes('besar') || jc.id === 'jc-5';
+                            const isTahunanItem = jc.nama.toLowerCase().includes('tahunan') || jc.id === 'jc-1';
+
                             const isExhausted = detail.sisa === 0 && detail.kuotaAwal > 0;
                             const isZeroQuota = detail.kuotaAwal === 0;
 
                             return (
                               <td key={jc.id} className="p-3 text-center border-l border-slate-100">
                                 <div className="inline-flex flex-col items-center">
-                                  <span className={`px-2.5 py-1 rounded-md text-xs font-mono font-bold border ${
-                                    isZeroQuota
-                                      ? 'bg-gray-50 text-gray-400 border-gray-200'
-                                      : isExhausted
-                                        ? 'bg-rose-50 text-rose-700 border-rose-200'
-                                        : detail.terpakai > 0
-                                          ? 'bg-amber-50 text-amber-800 border-amber-200'
-                                          : 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                                  }`}>
-                                    {detail.sisa} <span className="text-[10px] font-normal text-gray-500">/ {detail.kuotaAwal}</span>
-                                  </span>
-                                  {detail.terpakai > 0 && (
+                                  {isTahunanItem && detail.hasCutiBesarThisYear ? (
+                                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200" title="Hak Cuti Tahunan Gugur karena telah mengambil Cuti Besar pada tahun ini">
+                                      Gugur (Cuti Besar)
+                                    </span>
+                                  ) : isCutiBesarItem && (detail.isBesarSudahDiambil || detail.terpakai > 0) ? (
+                                    <div className="inline-flex flex-col items-center">
+                                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200" title={`Pegawai telah mengambil Cuti Besar pada tahun ${selectedYear}. Sesuai ketentuan BKN, Cuti Besar hanya dapat diambil 1 kali dalam setahun (sisa kuota hangus).`}>
+                                        Sudah Diambil 1x
+                                      </span>
+                                      <span className="text-[9px] text-rose-700 font-semibold mt-0.5">
+                                        Terpakai: {detail.terpakai} hr (Sisa: 0)
+                                      </span>
+                                    </div>
+                                  ) : (
+                                    <span className={`px-2.5 py-1 rounded-md text-xs font-mono font-bold border ${
+                                      isZeroQuota
+                                        ? 'bg-gray-50 text-gray-400 border-gray-200'
+                                        : isExhausted
+                                          ? 'bg-rose-50 text-rose-700 border-rose-200'
+                                          : detail.terpakai > 0
+                                            ? 'bg-amber-50 text-amber-800 border-amber-200'
+                                            : 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                                    }`}>
+                                      {detail.sisa} <span className="text-[10px] font-normal text-gray-500">/ {detail.kuotaAwal}</span>
+                                    </span>
+                                  )}
+                                  {detail.terpakai > 0 && !detail.hasCutiBesarThisYear && !isCutiBesarItem && (
                                     <span className="text-[9px] text-amber-700 font-medium mt-0.5">
                                       Terpakai: {detail.terpakai}
                                     </span>
                                   )}
+                                  {detail.hariCutiTahunanTerpakai && detail.hariCutiTahunanTerpakai > 0 && isCutiBesarItem && !detail.isBesarSudahDiambil && detail.terpakai === 0 ? (
+                                    <span className="text-[9px] text-blue-700 font-medium mt-0.5" title={`Kuota awal dipotong ${detail.hariCutiTahunanTerpakai} hari dari Cuti Tahunan yang telah diambil`}>
+                                      Dipotong {detail.hariCutiTahunanTerpakai} hr (Tahunan)
+                                    </span>
+                                  ) : null}
                                 </div>
                               </td>
                             );
@@ -848,6 +925,14 @@ export default function SisaCutiView({
                       const total = hitungTotalCutiTahunan(sc);
                       const isN2Hangus = (sc.sisaN2 < 12 || sc.sisaN1 < 12) && sc.sisaN2 > 0;
 
+                      const jcBesar = jenisCuti.find(j => j.nama.toLowerCase().includes('besar'));
+                      const tookCB = jcBesar ? pengajuan.some(pj => 
+                        pj.pegawaiId === sc.pegawaiId && 
+                        pj.jenisCutiId === jcBesar.id && 
+                        pj.status === 'Disetujui' &&
+                        (pj.tanggalMulai ? new Date(pj.tanggalMulai).getFullYear() : selectedYear) === selectedYear
+                      ) : false;
+
                       return (
                         <tr key={sc.id} className="hover:bg-gray-50/50 transition-all">
                           <td className="p-4 font-mono text-gray-400">{(pageTahunan - 1) * itemsPerPageTahunan + idx + 1}</td>
@@ -885,9 +970,20 @@ export default function SisaCutiView({
                             </span>
                           </td>
                           <td className="p-4 text-center">
-                            <span className="inline-block bg-blue-600 text-white border border-blue-700 px-3 py-1 rounded-lg text-sm font-black font-mono shadow-sm">
-                              {total} <span className="text-[10px] font-semibold text-blue-200">Hari</span>
-                            </span>
+                            {tookCB ? (
+                              <div className="inline-flex flex-col items-center">
+                                <span className="inline-block bg-rose-600 text-white border border-rose-700 px-3 py-1 rounded-lg text-xs font-black font-mono shadow-sm">
+                                  0 Hari
+                                </span>
+                                <span className="text-[9px] text-rose-700 font-bold mt-0.5">
+                                  Gugur (Cuti Besar)
+                                </span>
+                              </div>
+                            ) : (
+                              <span className="inline-block bg-blue-600 text-white border border-blue-700 px-3 py-1 rounded-lg text-sm font-black font-mono shadow-sm">
+                                {total} <span className="text-[10px] font-semibold text-blue-200">Hari</span>
+                              </span>
+                            )}
                           </td>
                           <td className="p-4">
                             <div className="flex items-center justify-center">
@@ -1208,9 +1304,9 @@ export default function SisaCutiView({
                         </div>
                       </div>
 
-                      {isTahunan && detail.keterangan && (
-                        <div className="text-[10px] text-slate-500 bg-white p-2 rounded-lg border border-slate-200 font-mono">
-                          Komponen: {detail.keterangan}
+                      {detail.keterangan && (
+                        <div className="text-[10px] text-slate-600 bg-white p-2 rounded-lg border border-slate-200 font-mono leading-relaxed">
+                          <strong>Keterangan:</strong> {detail.keterangan}
                         </div>
                       )}
 

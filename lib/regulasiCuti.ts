@@ -32,6 +32,7 @@ export const REGULASI_PENGURANGAN_CUTI_BKN: AturanPenguranganCuti[] = [
     dasarHukum: 'Peraturan BKN No. 24 Tahun 2017 Pasal 4-13 jo Peraturan BKN No. 7 Tahun 2021; PP No. 11/2017 Pasal 310-316; PP No. 49/2018 Pasal 77-80',
     poinPenting: [
       'Hak cuti tahunan diberikan 12 hari kerja dalam tahun berjalan (N).',
+      'Aturan Cuti Besar: Apabila PNS telah mengambil Cuti Besar pada tahun berjalan (Tahun N), maka PNS TIDAK BERHAK mengambil Cuti Tahunan pada tahun berjalan (hak cuti tahunan gugur).',
       'Akumulasi N-1: jika sisa N-1 ≥ 6 hari, hanya dapat diakumulasikan maksimal 6 hari. Jika sisa N-1 < 6 hari, diakumulasikan sebesar sisa riilnya.',
       'Akumulasi N-2: jika sisa N-2 < 12 hari atau pada tahun N-1 pernah mengambil cuti tahunan, maka sisa N-2 otomatis HANGUS (gugur). Hanya diakui (6 hari) jika 2 tahun berturut-turut utuh 12 hari (maks total 24 hari).',
       'Khusus PPPK: Cuti tahunan 12 hari kerja tidak dapat diakumulasikan ke tahun berikutnya (hangus bila tidak digunakan pada tahun berjalan sesuai PP 49/2018).'
@@ -115,15 +116,17 @@ export const REGULASI_PENGURANGAN_CUTI_BKN: AturanPenguranganCuti[] = [
     pengaruhCutiTahunan: 'Menghilangkan Hak Cuti Tahunan',
     sifatAkumulasi: 'Tidak Berakumulasi',
     urutanPemotongan: 'Meniadakan Hak Cuti Tahunan Tahun Berjalan',
-    sistemPengurangan: 'ATURAN KRITIS BKN: PNS yang menggunakan hak Cuti Besar TIDAK BERHAK LAGI atas Cuti Tahunan dalam tahun yang bersangkutan. Jika PNS telah mengambil sebagian Cuti Tahunan sebelum Cuti Besar, maka sisa kuota Cuti Tahunan tahun tersebut otomatis dinolkan (ditiadakan). Sisa Cuti Tahunan tahun sebelumnya (N-1 dan N-2) yang belum diambil tetap dapat digunakan jika masih sah.',
+    sistemPengurangan: 'ATURAN RESMI BKN (Perka BKN No. 24/2017 & PP No. 11/2017): Cuti Besar HANYA DAPAT DIAMBIL 1 (SATU) KALI DALAM 1 TAHUN BERJALAN. PNS yang telah menggunakan hak Cuti Besar TIDAK BERHAK LAGI atas Cuti Tahunan dalam tahun yang bersangkutan (Tahun N). Apabila PNS sudah pernah mengambil Cuti Tahunan sebelum mengambil Cuti Besar pada tahun berjalan, maka kuota Cuti Besar dikurangi dengan jumlah cuti tahunan yang telah diambil pada tahun berjalan tersebut (standar 90 hari dipotong hari cuti tahunan yang digunakan). Jika Cuti Besar diambil kurang dari batas maksimal 90 hari, sisa hari tidak dapat diakumulasikan dan tidak dapat diambil kembali pada tahun yang sama.',
     hakPegawai: 'Khusus PNS',
     syaratMasaKerja: 'Telah bekerja paling sedikit 5 (lima) tahun secara terus-menerus',
     dasarHukum: 'Peraturan BKN No. 24 Tahun 2017 Pasal 29-33 jo Peraturan BKN No. 7 Tahun 2021; PP No. 11/2017 Pasal 315 & 316',
     poinPenting: [
-      'Diberikan selama 3 (tiga) bulan kalender.',
+      'Diberikan selama 3 (tiga) bulan kalender (standar 90 hari kalender).',
       'Syarat telah mengabdi paling sedikit 5 tahun berturut-turut pada instansi pemerintah.',
+      'HANYA DAPAT DIAMBIL 1 KALI DALAM SETAHUN: Hak Cuti Besar hanya dapat diambil satu kali dalam 1 tahun berjalan. Sisa hari yang tidak digunakan tidak dapat diajukan kembali pada tahun yang sama (sisa kuota hangus).',
+      'PENGURANGAN KUOTA CUTI BESAR: Apabila sudah pernah mengambil Cuti Tahunan sebelum mengambil Cuti Besar pada tahun berjalan, maka kuota Cuti Besar dikurangi jumlah Cuti Tahunan yang pernah diambil pada tahun berjalan (tahun N).',
+      'MENIADAKAN CUTI TAHUNAN: Apabila sudah mengambil Cuti Besar, maka PNS tidak berhak lagi mengambil Cuti Tahunan pada tahun berjalan (tahun N).',
       'PNS yang menggunakan Cuti Besar dibebaskan dari tugas jabatan dan menerima penghasilan tanpa tunjangan kinerja / tunjangan jabatan penuh sesuai aturan daerah.',
-      'KONSEKUENSI PENGURANGAN: Menghilangkan hak Cuti Tahunan pada tahun yang bersangkutan.',
       'PPPK TIDAK MEMILIKI HAK Cuti Besar (sesuai PP No. 49 Tahun 2018).'
     ]
   },

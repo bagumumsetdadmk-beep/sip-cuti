@@ -105,7 +105,7 @@ export const initialJenisCuti: JenisCuti[] = [
   { id: 'jc-2', nama: 'Cuti Sakit', kuotaDefault: 14, keterangan: 'Hak cuti sakit jika sakit lebih dari 1-14 hari dengan surat dokter.', hakPegawai: 'Semua' },
   { id: 'jc-3', nama: 'Cuti Melahirkan', kuotaDefault: 90, keterangan: 'Diberikan untuk persalinan pertama sampai ketiga sebanyak 3 bulan.', hakPegawai: 'Semua' },
   { id: 'jc-4', nama: 'Cuti Alasan Penting', kuotaDefault: 15, keterangan: 'Diberikan kepada PNS karena keluarga sakit keras, meninggal, melangsungkan pernikahan, dll.', hakPegawai: 'PNS' },
-  { id: 'jc-5', nama: 'Cuti Besar', kuotaDefault: 90, keterangan: 'Diberikan kepada PNS yang telah bekerja paling sedikit 6 tahun secara terus menerus.', hakPegawai: 'PNS' },
+  { id: 'jc-5', nama: 'Cuti Besar', kuotaDefault: 90, keterangan: 'Diberikan kepada PNS yang telah bekerja paling sedikit 5 tahun secara terus menerus, maksimal 1 kali dalam 1 tahun berjalan (3 bulan / 90 hari kalender).', hakPegawai: 'PNS' },
   { id: 'jc-6', nama: 'Cuti di Luar Tanggungan Negara', kuotaDefault: 1095, keterangan: 'Diberikan karena alasan pribadi mendesak setelah bekerja paling sedikit 5 tahun.', hakPegawai: 'PNS' }
 ];
 

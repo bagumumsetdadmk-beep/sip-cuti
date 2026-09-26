@@ -86,6 +86,10 @@ export interface SisaKuotaDetail {
   sisa: number;
   satuan: 'Hari Kerja' | 'Hari Kalender';
   keterangan?: string;
+  hasCutiBesarThisYear?: boolean;
+  hariCutiTahunanTerpakai?: number;
+  kuotaDisesuaikan?: number;
+  isBesarSudahDiambil?: boolean;
 }
 
 export interface PengaturanUser {
