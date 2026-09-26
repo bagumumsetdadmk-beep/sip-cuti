@@ -91,7 +91,7 @@ export default function Sidebar({ currentMenu, setCurrentMenu, currentUser }: Si
     { id: 'harilibur', label: 'Hari Libur', icon: CalendarDays, section: 'MASTER DATA', roles: ['Admin'] },
     { id: 'atasanpejabat', label: 'Atasan & Pejabat', icon: UserCheck, section: 'MASTER DATA', roles: ['Admin'] },
     { id: 'jeniscuti', label: 'Jenis Cuti', icon: FileText, section: 'MASTER DATA', roles: ['Admin'] },
-    { id: 'sisacuti', label: 'Sisa Cuti Tahunan', icon: History, section: 'MASTER DATA', roles: allRoles },
+    { id: 'sisacuti', label: 'Sisa & Kuota Cuti', icon: History, section: 'MASTER DATA', roles: allRoles },
     { id: 'rekapcuti', label: 'Rekap Cuti Pegawai', icon: FileText, section: 'MASTER DATA', roles: allRoles },
     { id: 'pengajuan', label: 'Pengajuan Cuti', icon: FileEdit, section: 'TRANSAKSI', badge: generalPendingCount > 0 ? generalPendingCount : undefined, roles: ['Admin', 'Operator', 'Pegawai'] },
     { id: 'persetujuan', label: 'Persetujuan Cuti', icon: CheckSquare, section: 'TRANSAKSI', badge: approvalPendingCount > 0 ? approvalPendingCount : undefined, roles: ['Admin', 'Verifikator', 'Atasan', 'Pejabat'] },

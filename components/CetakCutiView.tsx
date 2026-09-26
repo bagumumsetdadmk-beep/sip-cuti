@@ -5,6 +5,7 @@
 import React, { useState } from 'react';
 import { Search, Printer, X, FileCheck, CheckSquare, Square, Check } from 'lucide-react';
 import { PengajuanCuti, Pegawai, JenisCuti, SisaCutiTahunan, PengaturanInstansi } from '../lib/types';
+import Pagination from './Pagination';
 
 interface CetakCutiViewProps {
   pengajuan: PengajuanCuti[];
@@ -18,6 +19,8 @@ interface CetakCutiViewProps {
 export default function CetakCutiView({ pengajuan, pegawai, jenisCuti, sisaCuti, instansi, currentUser }: CetakCutiViewProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedPrint, setSelectedPrint] = useState<PengajuanCuti | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   const cleanNip = (rawNip?: string) => {
     if (!rawNip) return '';
@@ -50,6 +53,12 @@ export default function CetakCutiView({ pengajuan, pegawai, jenisCuti, sisaCuti,
            pj.nomorSurat.toLowerCase().includes(s);
   });
 
+  const totalPages = Math.ceil(disetujuiPengajuan.length / itemsPerPage);
+  const paginatedPengajuan = disetujuiPengajuan.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
   const handlePrintDocument = () => {
     window.print();
   };
@@ -78,18 +87,26 @@ export default function CetakCutiView({ pengajuan, pegawai, jenisCuti, sisaCuti,
         </div>
 
         {/* Search */}
-        <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex items-center gap-4">
-          <div className="relative w-full md:w-80 shrink-0">
-            <Search className="w-4 h-4 text-gray-400 absolute left-3 top-2.5" />
-            <input
-              type="text"
-              placeholder="Cari nama pemohon atau nomor surat..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full bg-gray-50 border border-gray-200 rounded-lg pl-9 pr-4 py-1.5 text-xs text-gray-700 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
-            />
+        <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-4 w-full md:w-auto">
+            <div className="relative w-full md:w-80 shrink-0">
+              <Search className="w-4 h-4 text-gray-400 absolute left-3 top-2.5" />
+              <input
+                type="text"
+                placeholder="Cari nama pemohon atau nomor surat..."
+                value={searchTerm}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="w-full bg-gray-50 border border-gray-200 rounded-lg pl-9 pr-4 py-1.5 text-xs text-gray-700 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
+              />
+            </div>
+            <span className="text-xs text-gray-400 font-mono hidden sm:inline">Hanya menampilkan pengajuan berstatus &quot;DISETUJUI&quot;</span>
           </div>
-          <span className="text-xs text-gray-400 font-mono">Hanya menampilkan pengajuan berstatus &quot;DISETUJUI&quot;</span>
+          <div className="flex items-center gap-4 text-xs font-medium text-gray-500 self-end md:self-auto shrink-0">
+            <span>Total Disetujui: <strong className="text-gray-800">{disetujuiPengajuan.length}</strong></span>
+          </div>
         </div>
 
         {/* Tabel */}
@@ -114,9 +131,9 @@ export default function CetakCutiView({ pengajuan, pegawai, jenisCuti, sisaCuti,
                     </td>
                   </tr>
                 ) : (
-                  disetujuiPengajuan.map((pj, idx) => (
+                  paginatedPengajuan.map((pj, idx) => (
                     <tr key={pj.id} className="hover:bg-gray-50/50 transition-all">
-                      <td className="p-4 font-mono text-gray-400">{idx + 1}</td>
+                      <td className="p-4 font-mono text-gray-400">{(currentPage - 1) * itemsPerPage + idx + 1}</td>
                       <td className="p-4">
                         <div className="font-bold text-gray-900">{pj.nomorSurat}</div>
                         <div className="text-xs text-gray-400">Pengajuan: {pj.tanggalPengajuan}</div>
@@ -159,7 +176,7 @@ export default function CetakCutiView({ pengajuan, pegawai, jenisCuti, sisaCuti,
                               className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 rounded-lg text-sm font-bold transition-all inline-flex items-center gap-1 shadow-sm cursor-pointer"
                             >
                               <Printer className="w-3.5 h-3.5" />
-                              <span>Buka Lembar Cetak</span>
+                              <span>Cetak</span>
                             </button>
                           );
                         })()}
@@ -170,6 +187,13 @@ export default function CetakCutiView({ pengajuan, pegawai, jenisCuti, sisaCuti,
               </tbody>
             </table>
           </div>
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+            totalItems={disetujuiPengajuan.length}
+            itemsPerPage={itemsPerPage}
+          />
         </div>
       </div>
 

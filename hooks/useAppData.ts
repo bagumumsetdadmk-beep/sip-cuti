@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react';
 import { Pegawai, HariLibur, AtasanPejabat, JenisCuti, SisaCutiTahunan, PengajuanCuti, PengaturanInstansi, PengaturanUser, SisaKuotaDetail } from '../lib/types';
 import { supabase } from '../lib/supabase';
 import { getStorageFilePath } from '../lib/utils';
+import { deleteUploadedFile } from '../lib/storage';
 import { initialUsers, defaultPengaturanInstansi, initialPegawai, initialHariLibur, initialAtasanPejabat, initialJenisCuti, initialSisaCutiTahunan, initialPengajuanCuti } from '../lib/initialData';
 
 // Helper mapping functions
@@ -30,7 +31,9 @@ const mapJenisCuti = (j: any): JenisCuti => ({
   nama: j.nama,
   kuotaDefault: j.kuota_default,
   keterangan: j.deskripsi || '',
-  hakPegawai: j.hak_pegawai || 'Semua'
+  hakPegawai: j.nama?.toLowerCase().includes('penting')
+    ? 'PNS'
+    : (j.hak_pegawai || 'Semua')
 });
 
 const mapHariLibur = (h: any): HariLibur => ({
@@ -187,6 +190,14 @@ export function useAppData() {
     } catch (error) {
       console.error("Error loading data from Supabase:", error);
       // Fallback
+      if (typeof window !== 'undefined') {
+        const savedInstansiStr = localStorage.getItem('sip_cuti_instansi');
+        if (savedInstansiStr) {
+          try {
+            setInstansi(JSON.parse(savedInstansiStr));
+          } catch (e) {}
+        }
+      }
       setPegawai(initialPegawai);
       setJenisCuti(initialJenisCuti);
       setHariLibur(initialHariLibur);
@@ -207,6 +218,10 @@ export function useAppData() {
       const savedUser = localStorage.getItem('sip_cuti_currentuser');
       if (savedUser) {
         try { setCurrentUser(JSON.parse(savedUser)); } catch (e) {}
+      }
+      const savedInstansi = localStorage.getItem('sip_cuti_instansi');
+      if (savedInstansi) {
+        try { setInstansi(JSON.parse(savedInstansi)); } catch (e) {}
       }
     }
   }, []);
@@ -680,13 +695,10 @@ export function useAppData() {
   const deletePengajuan = async (id: string) => {
     const target = pengajuan.find(item => item.id === id);
     if (target?.berkasPendukung) {
-      const oldPath = getStorageFilePath(target.berkasPendukung);
-      if (oldPath) {
-        try {
-          await supabase.storage.from('berkas_cuti').remove([oldPath]);
-        } catch (e) {
-          console.warn('Gagal menghapus berkas dari storage:', e);
-        }
+      try {
+        await deleteUploadedFile(target.berkasPendukung);
+      } catch (e) {
+        console.warn('Gagal menghapus berkas:', e);
       }
     }
     const { error } = await supabase.from('pengajuan_cuti').delete().eq('id', id);
@@ -771,6 +783,17 @@ export function useAppData() {
 
   // == INSTANSI UPDATE ==
   const updateInstansi = async (data: PengaturanInstansi) => {
+    // 1. Always update local state immediately and persist to localStorage
+    setInstansi(data);
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('sip_cuti_instansi', JSON.stringify(data));
+      } catch (e) {
+        console.warn('Gagal menyimpan instansi ke localStorage:', e);
+      }
+    }
+
+    // 2. Sync to Supabase if accessible
     const payload = {
       nama_instansi: data.namaInstansi,
       alamat: data.alamat,
@@ -781,18 +804,22 @@ export function useAppData() {
       logo_url: data.logoUrl
     };
     
-    const { data: existing } = await supabase.from('pengaturan_instansi').select('id').limit(1).maybeSingle();
-    
-    if (existing) {
-      const { data: updated, error } = await supabase.from('pengaturan_instansi').update(payload).eq('id', existing.id).select().single();
-      if (!error && updated) {
-        setInstansi({ ...data, namaInstansi: updated.nama_instansi, logoUrl: updated.logo_url || '' });
+    try {
+      const { data: existing, error: selErr } = await supabase.from('pengaturan_instansi').select('id').limit(1).maybeSingle();
+      
+      if (!selErr && existing) {
+        const { data: updated, error } = await supabase.from('pengaturan_instansi').update(payload).eq('id', existing.id).select().single();
+        if (!error && updated) {
+          setInstansi({ ...data, namaInstansi: updated.nama_instansi, logoUrl: updated.logo_url || data.logoUrl });
+        }
+      } else if (!selErr) {
+        const { data: inserted, error } = await supabase.from('pengaturan_instansi').insert(payload).select().single();
+        if (!error && inserted) {
+          setInstansi({ ...data, namaInstansi: inserted.nama_instansi, logoUrl: inserted.logo_url || data.logoUrl });
+        }
       }
-    } else {
-      const { data: inserted, error } = await supabase.from('pengaturan_instansi').insert(payload).select().single();
-      if (!error && inserted) {
-        setInstansi({ ...data, namaInstansi: inserted.nama_instansi, logoUrl: inserted.logo_url || '' });
-      }
+    } catch (err) {
+      console.warn('Supabase updateInstansi sync failed (saved locally):', err);
     }
   };
 

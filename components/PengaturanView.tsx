@@ -1,11 +1,10 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Settings, Save, Landmark, Phone, Mail, Globe, UserCheck, AlertCircle } from 'lucide-react';
+import { Settings, Save, Landmark, Phone, Mail, Globe, UserCheck, AlertCircle, Trash2 } from 'lucide-react';
 import { PengaturanInstansi } from '../lib/types';
 import { useToast } from '../lib/ToastContext';
-import { supabase } from '../lib/supabase';
-import { getStorageFilePath } from '../lib/utils';
+import { uploadFile, deleteUploadedFile } from '../lib/storage';
 
 interface PengaturanViewProps {
   instansi: PengaturanInstansi;
@@ -171,7 +170,22 @@ export default function PengaturanView({ instansi, updateInstansi }: PengaturanV
               </div>
 
               <div className="col-span-2 space-y-1">
-                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider font-mono">Logo Instansi (Maks. 500kb)</label>
+                <div className="flex items-center justify-between">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider font-mono">Logo Instansi (Maks. 500kb)</label>
+                  {logoUrl && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        deleteUploadedFile(logoUrl);
+                        setLogoUrl('');
+                        showToast('Logo dihapus', 'info');
+                      }}
+                      className="text-[10px] text-red-500 hover:text-red-700 flex items-center gap-1 font-semibold cursor-pointer"
+                    >
+                      <Trash2 className="w-3 h-3" /> Hapus Logo
+                    </button>
+                  )}
+                </div>
                 <input
                   type="file"
                   accept="image/*"
@@ -188,35 +202,16 @@ export default function PengaturanView({ instansi, updateInstansi }: PengaturanV
                       setIsUploading(true);
                       const oldLogoUrl = logoUrl;
                       try {
-                        const fileExt = file.name.split('.').pop();
-                        const fileName = `logo_${Date.now()}.${fileExt}`;
-                        
-                        const { error } = await supabase.storage
-                          .from('berkas_cuti')
-                          .upload(fileName, file);
-                          
-                        if (error) throw error;
-                        
-                        const { data } = supabase.storage
-                          .from('berkas_cuti')
-                          .getPublicUrl(fileName);
-                          
-                        setLogoUrl(data.publicUrl);
+                        const { url } = await uploadFile(file, 'logo');
+                        setLogoUrl(url);
                         showToast('Logo berhasil diunggah', 'success');
 
-                        if (oldLogoUrl) {
-                          const oldPath = getStorageFilePath(oldLogoUrl);
-                          if (oldPath) {
-                            try {
-                              await supabase.storage.from('berkas_cuti').remove([oldPath]);
-                            } catch (err) {
-                              console.warn('Gagal menghapus logo lama:', err);
-                            }
-                          }
+                        if (oldLogoUrl && oldLogoUrl !== url) {
+                          deleteUploadedFile(oldLogoUrl);
                         }
                       } catch (error: any) {
                         console.error('Error uploading logo:', error);
-                        showToast('Gagal mengunggah logo: ' + error.message, 'error');
+                        showToast('Gagal memproses logo: ' + (error?.message || 'Error tidak diketahui'), 'error');
                         e.target.value = '';
                       } finally {
                         setIsUploading(false);
@@ -225,6 +220,9 @@ export default function PengaturanView({ instansi, updateInstansi }: PengaturanV
                   }}
                   className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 text-xs text-gray-700 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
                 />
+                {isUploading && (
+                  <p className="text-[11px] text-blue-600 font-semibold animate-pulse">Mengunggah logo...</p>
+                )}
               </div>
             </div>
 

@@ -19,9 +19,18 @@ import {
   AlertCircle,
   FileSpreadsheet,
   Building2,
-  Filter
+  Filter,
+  Scale,
+  BookOpen,
+  ShieldCheck,
+  Check,
+  AlertTriangle,
+  ArrowRight,
+  HelpCircle,
+  Sparkles
 } from 'lucide-react';
 import { SisaCutiTahunan, Pegawai, PengaturanUser, JenisCuti, PengajuanCuti, SisaKuotaDetail } from '../lib/types';
+import { REGULASI_PENGURANGAN_CUTI_BKN, getAturanCuti, AturanPenguranganCuti } from '../lib/regulasiCuti';
 import { useToast } from '../lib/ToastContext';
 import Pagination from './Pagination';
 
@@ -57,8 +66,8 @@ export default function SisaCutiView({
   const { showToast } = useToast();
   const isAdmin = currentUser?.role === 'Admin';
   
-  // Tab State: 'semua_jenis' | 'akumulasi_tahunan'
-  const [activeTab, setActiveTab] = useState<'semua_jenis' | 'akumulasi_tahunan'>('semua_jenis');
+  // Tab State: 'semua_jenis' | 'akumulasi_tahunan' | 'sistem_pengurangan'
+  const [activeTab, setActiveTab] = useState<'semua_jenis' | 'akumulasi_tahunan' | 'sistem_pengurangan'>('semua_jenis');
 
   // Global filters
   const currentYearNow = new Date().getFullYear();
@@ -66,6 +75,11 @@ export default function SisaCutiView({
   const [searchTerm, setSearchTerm] = useState('');
   const [filterUnitKerja, setFilterUnitKerja] = useState('Semua');
   const [filterStatusPegawai, setFilterStatusPegawai] = useState('Semua');
+
+  // Filter for Regulasi Tab
+  const [filterPengaruhCuti, setFilterPengaruhCuti] = useState('Semua');
+  const [searchRegulasi, setSearchRegulasi] = useState('');
+  const [selectedRegulasiModal, setSelectedRegulasiModal] = useState<AturanPenguranganCuti | null>(null);
 
   // Modals
   const [showModal, setShowModal] = useState(false);
@@ -222,6 +236,23 @@ export default function SisaCutiView({
       totalCutiDisetujuiTahunIni
     };
   }, [pegawai, pengajuan, selectedYear]);
+
+  // Filtered Regulasi BKN for Tab 3
+  const filteredRegulasi = useMemo(() => {
+    return REGULASI_PENGURANGAN_CUTI_BKN.filter(reg => {
+      if (filterPengaruhCuti !== 'Semua' && reg.pengaruhCutiTahunan !== filterPengaruhCuti) return false;
+      if (searchRegulasi) {
+        const s = searchRegulasi.toLowerCase();
+        const match = reg.namaJenis.toLowerCase().includes(s) ||
+          reg.singkatan.toLowerCase().includes(s) ||
+          reg.sistemPengurangan.toLowerCase().includes(s) ||
+          reg.dasarHukum.toLowerCase().includes(s) ||
+          reg.poinPenting.some(p => p.toLowerCase().includes(s));
+        if (!match) return false;
+      }
+      return true;
+    });
+  }, [filterPengaruhCuti, searchRegulasi]);
 
   // Actions
   const openEditModal = (sc: SisaCutiTahunan) => {
@@ -471,80 +502,127 @@ export default function SisaCutiView({
             Aturan BKN
           </span>
         </button>
+
+        <button
+          onClick={() => setActiveTab('sistem_pengurangan')}
+          className={`flex items-center gap-2 pb-3 px-3 text-xs font-bold border-b-2 transition-all cursor-pointer ${
+            activeTab === 'sistem_pengurangan'
+              ? 'border-blue-600 text-blue-600'
+              : 'border-transparent text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          <Scale className="w-4 h-4 text-emerald-600" />
+          <span>Sistem Pengurangan Kuota & Regulasi BKN</span>
+          <span className="bg-emerald-100 text-emerald-800 text-[10px] px-2 py-0.5 rounded-full font-black">
+            Identifikasi Regulasi
+          </span>
+        </button>
       </div>
 
-      {/* Filter & Year Toolbar */}
-      <div className="bg-white p-4 rounded-b-xl rounded-t-none border border-t-0 border-gray-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4 -mt-6">
-        <div className="flex flex-wrap items-center gap-3">
-          {/* Year selector */}
-          <div className="flex items-center gap-1.5">
-            <span className="text-xs text-gray-500 font-bold">Tahun Acuan:</span>
-            <select
-              value={selectedYear}
-              onChange={(e) => setSelectedYear(Number(e.target.value))}
-              className="bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs font-bold text-blue-700 focus:outline-none focus:border-blue-500 font-mono cursor-pointer"
-            >
-              {[currentYearNow - 2, currentYearNow - 1, currentYearNow, currentYearNow + 1].map(yr => (
-                <option key={yr} value={yr}>{yr} {yr === currentYearNow ? '(Tahun Berjalan)' : ''}</option>
-              ))}
-            </select>
+      {/* Filter & Toolbar */}
+      {activeTab === 'sistem_pengurangan' ? (
+        <div className="bg-white p-4 rounded-b-xl rounded-t-none border border-t-0 border-gray-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4 -mt-6">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-1.5">
+              <Scale className="w-4 h-4 text-blue-600" />
+              <span className="text-xs text-gray-700 font-bold">Filter Pengaruh ke Cuti Tahunan:</span>
+              <select
+                value={filterPengaruhCuti}
+                onChange={(e) => setFilterPengaruhCuti(e.target.value)}
+                className="bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs text-gray-700 focus:outline-none focus:border-blue-500 cursor-pointer"
+              >
+                <option value="Semua">Semua Pengaruh (Semua Jenis Cuti)</option>
+                <option value="Mengurangi Cuti Tahunan">Mengurangi Cuti Tahunan</option>
+                <option value="Tidak Mengurangi Cuti Tahunan">Tidak Mengurangi Cuti Tahunan</option>
+                <option value="Menghilangkan Hak Cuti Tahunan">Menghilangkan Hak Cuti Tahunan</option>
+              </select>
+            </div>
           </div>
 
-          {/* Unit Kerja Filter */}
-          <div className="flex items-center gap-1.5">
-            <Building2 className="w-3.5 h-3.5 text-gray-400" />
-            <select
-              value={filterUnitKerja}
+          <div className="relative w-full md:w-80">
+            <Search className="w-4 h-4 text-gray-400 absolute left-3 top-2.5" />
+            <input
+              type="text"
+              placeholder="Cari jenis cuti, aturan BKN, atau dasar hukum..."
+              value={searchRegulasi}
+              onChange={(e) => setSearchRegulasi(e.target.value)}
+              className="w-full bg-gray-50 border border-gray-200 rounded-lg pl-9 pr-4 py-1.5 text-xs text-gray-700 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
+            />
+          </div>
+        </div>
+      ) : (
+        <div className="bg-white p-4 rounded-b-xl rounded-t-none border border-t-0 border-gray-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4 -mt-6">
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Year selector */}
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs text-gray-500 font-bold">Tahun Acuan:</span>
+              <select
+                value={selectedYear}
+                onChange={(e) => setSelectedYear(Number(e.target.value))}
+                className="bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs font-bold text-blue-700 focus:outline-none focus:border-blue-500 font-mono cursor-pointer"
+              >
+                {[currentYearNow - 2, currentYearNow - 1, currentYearNow, currentYearNow + 1].map(yr => (
+                  <option key={yr} value={yr}>{yr} {yr === currentYearNow ? '(Tahun Berjalan)' : ''}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Unit Kerja Filter */}
+            <div className="flex items-center gap-1.5">
+              <Building2 className="w-3.5 h-3.5 text-gray-400" />
+              <select
+                value={filterUnitKerja}
+                onChange={(e) => {
+                  setFilterUnitKerja(e.target.value);
+                  setPageSemua(1);
+                  setPageTahunan(1);
+                }}
+                className="bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs text-gray-700 focus:outline-none focus:border-blue-500 cursor-pointer max-w-[180px]"
+              >
+                <option value="Semua">Semua Unit Kerja</option>
+                {unitKerjaList.map(u => (
+                  <option key={u} value={u}>{u}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Status Pegawai Filter */}
+            <div className="flex items-center gap-1.5">
+              <Filter className="w-3.5 h-3.5 text-gray-400" />
+              <select
+                value={filterStatusPegawai}
+                onChange={(e) => {
+                  setFilterStatusPegawai(e.target.value);
+                  setPageSemua(1);
+                  setPageTahunan(1);
+                }}
+                className="bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs text-gray-700 focus:outline-none focus:border-blue-500 cursor-pointer"
+              >
+                <option value="Semua">Semua Status ASN</option>
+                <option value="PNS">PNS</option>
+                <option value="PPPK">PPPK</option>
+                <option value="PPPK PW">PPPK PW</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Search */}
+          <div className="relative w-full md:w-72">
+            <Search className="w-4 h-4 text-gray-400 absolute left-3 top-2.5" />
+            <input
+              type="text"
+              placeholder="Cari nama atau NIP pegawai..."
+              value={searchTerm}
               onChange={(e) => {
-                setFilterUnitKerja(e.target.value);
+                setSearchTerm(e.target.value);
                 setPageSemua(1);
                 setPageTahunan(1);
               }}
-              className="bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs text-gray-700 focus:outline-none focus:border-blue-500 cursor-pointer max-w-[180px]"
-            >
-              <option value="Semua">Semua Unit Kerja</option>
-              {unitKerjaList.map(u => (
-                <option key={u} value={u}>{u}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Status Pegawai Filter */}
-          <div className="flex items-center gap-1.5">
-            <Filter className="w-3.5 h-3.5 text-gray-400" />
-            <select
-              value={filterStatusPegawai}
-              onChange={(e) => {
-                setFilterStatusPegawai(e.target.value);
-                setPageSemua(1);
-                setPageTahunan(1);
-              }}
-              className="bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs text-gray-700 focus:outline-none focus:border-blue-500 cursor-pointer"
-            >
-              <option value="Semua">Semua Status ASN</option>
-              <option value="PNS">PNS</option>
-              <option value="PPPK">PPPK</option>
-              <option value="PPPK PW">PPPK PW</option>
-            </select>
+              className="w-full bg-gray-50 border border-gray-200 rounded-lg pl-9 pr-4 py-1.5 text-xs text-gray-700 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
+            />
           </div>
         </div>
-
-        {/* Search */}
-        <div className="relative w-full md:w-72">
-          <Search className="w-4 h-4 text-gray-400 absolute left-3 top-2.5" />
-          <input
-            type="text"
-            placeholder="Cari nama atau NIP pegawai..."
-            value={searchTerm}
-            onChange={(e) => {
-              setSearchTerm(e.target.value);
-              setPageSemua(1);
-              setPageTahunan(1);
-            }}
-            className="w-full bg-gray-50 border border-gray-200 rounded-lg pl-9 pr-4 py-1.5 text-xs text-gray-700 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
-          />
-        </div>
-      </div>
+      )}
 
       {/* TAB 1: SISA KUOTA SEMUA JENIS CUTI */}
       {activeTab === 'semua_jenis' && (
@@ -556,19 +634,30 @@ export default function SisaCutiView({
               <div className="space-y-1">
                 <p className="font-bold text-blue-950">Informasi Perhitungan Sisa Kuota Seluruh Jenis Cuti (Tahun {selectedYear}):</p>
                 <p className="text-blue-800 leading-relaxed">
-                  Sisa kuota masing-masing jenis cuti dihitung otomatis dari <strong>Kuota Standar Per Tahun</strong> dikurangi total <strong>Hari Cuti yang Telah Disetujui</strong> pada tahun tersebut. Khusus Cuti Tahunan memperhitungkan akumulasi sisa N, N-1, dan N-2.
+                  Sisa kuota masing-masing jenis cuti dihitung otomatis dari <strong>Kuota Standar Per Tahun</strong> dikurangi total <strong>Hari Cuti yang Telah Disetujui</strong> pada tahun tersebut. Khusus Cuti Tahunan memperhitungkan akumulasi sisa N, N-1, dan N-2. Klik ikon timbangan pada header kolom untuk melihat tata cara pemotongan saldo sesuai regulasi BKN.
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-3 shrink-0 bg-white/80 border border-blue-200/60 px-3.5 py-2 rounded-lg">
-              <div className="text-center">
-                <div className="text-[10px] text-gray-500 font-bold uppercase">Total Pegawai</div>
-                <div className="text-base font-black text-gray-900">{stats.totalPeg}</div>
-              </div>
-              <div className="h-6 w-px bg-gray-200" />
-              <div className="text-center">
-                <div className="text-[10px] text-gray-500 font-bold uppercase">Cuti Disetujui ({selectedYear})</div>
-                <div className="text-base font-black text-blue-700">{stats.totalCutiDisetujuiTahunIni} Hari</div>
+            <div className="flex flex-wrap items-center gap-3 shrink-0">
+              <button
+                onClick={() => setActiveTab('sistem_pengurangan')}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition-all shadow-sm cursor-pointer"
+                title="Buka Halaman Panduan Sistem Pengurangan Kuota Cuti BKN"
+              >
+                <Scale className="w-3.5 h-3.5" />
+                <span>Sistem Pengurangan Kuota</span>
+              </button>
+
+              <div className="flex items-center gap-3 bg-white/80 border border-blue-200/60 px-3.5 py-1.5 rounded-lg">
+                <div className="text-center">
+                  <div className="text-[10px] text-gray-500 font-bold uppercase">Total Pegawai</div>
+                  <div className="text-sm font-black text-gray-900">{stats.totalPeg}</div>
+                </div>
+                <div className="h-5 w-px bg-gray-200" />
+                <div className="text-center">
+                  <div className="text-[10px] text-gray-500 font-bold uppercase">Cuti Disetujui ({selectedYear})</div>
+                  <div className="text-sm font-black text-blue-700">{stats.totalCutiDisetujuiTahunIni} Hari</div>
+                </div>
               </div>
             </div>
           </div>
@@ -581,14 +670,41 @@ export default function SisaCutiView({
                   <tr className="bg-slate-100 text-slate-700 font-bold border-b border-slate-200">
                     <th className="p-3.5 w-12 text-center">No</th>
                     <th className="p-3.5 min-w-[220px]">Pegawai & Unit Kerja</th>
-                    {jenisCuti.map(jc => (
-                      <th key={jc.id} className="p-3.5 text-center min-w-[130px] border-l border-slate-200/60">
-                        <div className="font-bold text-slate-800 line-clamp-1" title={jc.nama}>{jc.nama}</div>
-                        <div className="text-[10px] font-normal text-slate-500">
-                          Kuota: {jc.kuotaDefault} {jc.nama.toLowerCase().includes('sakit') || jc.nama.toLowerCase().includes('melahirkan') || jc.nama.toLowerCase().includes('besar') || jc.nama.toLowerCase().includes('luar tanggungan') ? 'HK' : 'Hari'}
-                        </div>
-                      </th>
-                    ))}
+                    {jenisCuti.map(jc => {
+                      const aturan = getAturanCuti(jc.nama);
+                      return (
+                        <th key={jc.id} className="p-3.5 text-center min-w-[135px] border-l border-slate-200/60">
+                          <div className="flex items-center justify-center gap-1">
+                            <span className="font-bold text-slate-800 line-clamp-1" title={jc.nama}>{jc.nama}</span>
+                            {aturan && (
+                              <button
+                                onClick={() => setSelectedRegulasiModal(aturan)}
+                                className="text-blue-500 hover:text-blue-700 p-0.5 rounded hover:bg-blue-100 cursor-pointer"
+                                title={`Pelajari Aturan Pengurangan Kuota ${jc.nama} (BKN)`}
+                              >
+                                <Scale className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                          </div>
+                          <div className="text-[10px] font-normal text-slate-500">
+                            Kuota: {jc.kuotaDefault} {aturan?.satuanHari === 'Hari Kalender' ? 'HK' : 'Hari'}
+                          </div>
+                          {aturan && (
+                            <div className="mt-1">
+                              <span className={`text-[9px] px-1.5 py-0.2 rounded font-bold ${
+                                aturan.pengaruhCutiTahunan === 'Mengurangi Cuti Tahunan'
+                                  ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                                  : aturan.pengaruhCutiTahunan === 'Menghilangkan Hak Cuti Tahunan'
+                                    ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                                    : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                              }`}>
+                                {aturan.pengaruhCutiTahunan === 'Mengurangi Cuti Tahunan' ? 'Potong Tahunan' : aturan.pengaruhCutiTahunan === 'Menghilangkan Hak Cuti Tahunan' ? 'Nolkan Tahunan' : 'Bebas Tahunan'}
+                              </span>
+                            </div>
+                          )}
+                        </th>
+                      );
+                    })}
                     <th className="p-3.5 text-center bg-blue-50/60 border-l border-blue-200 min-w-[100px]">
                       Total Terpakai
                     </th>
@@ -819,6 +935,205 @@ export default function SisaCutiView({
         </div>
       )}
 
+      {/* TAB 3: SISTEM PENGURANGAN KUOTA & REGULASI BKN */}
+      {activeTab === 'sistem_pengurangan' && (
+        <div className="space-y-6">
+          {/* Banner Regulasi */}
+          <div className="bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 text-white p-5 rounded-2xl shadow-md border border-slate-700">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="space-y-1.5 max-w-3xl">
+                <div className="inline-flex items-center gap-2 bg-blue-500/20 text-blue-300 px-2.5 py-0.5 rounded-full text-[11px] font-bold border border-blue-400/30">
+                  <ShieldCheck className="w-3.5 h-3.5 text-blue-400" />
+                  <span>Kepatuhan Regulasi Manajemen ASN</span>
+                </div>
+                <h4 className="text-base font-extrabold text-white tracking-wide">
+                  Sistem &amp; Tata Cara Pengurangan Kuota Cuti ASN
+                </h4>
+                <p className="text-xs text-slate-300 leading-relaxed">
+                  Identifikasi kesesuaian sistem pengurangan saldo kuota cuti berdasarkan <strong>Peraturan BKN No. 24 Tahun 2017 jo Peraturan BKN No. 7 Tahun 2021</strong>, <strong>PP No. 11 Tahun 2017 jo PP No. 17 Tahun 2020</strong> (Manajemen PNS), dan <strong>PP No. 49 Tahun 2018</strong> (Manajemen PPPK).
+                </p>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <div className="bg-white/10 backdrop-blur-xs p-3 rounded-xl border border-white/10 text-center">
+                  <div className="text-[10px] text-blue-200 uppercase font-mono">Total Kategori Cuti</div>
+                  <div className="text-xl font-black text-white">{REGULASI_PENGURANGAN_CUTI_BKN.length} Jenis</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Matriks Perbandingan Sistem Pengurangan Kuota */}
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+            <div className="p-4 border-b border-gray-100 flex items-center justify-between bg-slate-50/50">
+              <div className="flex items-center gap-2">
+                <Scale className="w-4 h-4 text-blue-600" />
+                <h5 className="font-bold text-xs text-gray-800 uppercase tracking-wider">
+                  Matriks Perbandingan Sistem Pengurangan Kuota Antar-Jenis Cuti
+                </h5>
+              </div>
+              <span className="text-[11px] text-gray-500 font-mono">
+                Menampilkan {filteredRegulasi.length} dari {REGULASI_PENGURANGAN_CUTI_BKN.length} jenis cuti
+              </span>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs border-collapse min-w-[950px]">
+                <thead>
+                  <tr className="bg-slate-100 text-slate-700 font-bold border-b border-slate-200">
+                    <th className="p-3.5 w-12 text-center">No</th>
+                    <th className="p-3.5 min-w-[160px]">Jenis Cuti &amp; Kode</th>
+                    <th className="p-3.5 min-w-[130px]">Kuota Standar</th>
+                    <th className="p-3.5 min-w-[100px] text-center">Satuan Hari</th>
+                    <th className="p-3.5 min-w-[180px]">Pengaruh ke Cuti Tahunan</th>
+                    <th className="p-3.5 min-w-[240px]">Urutan &amp; Sistem Pemotongan</th>
+                    <th className="p-3.5 min-w-[150px]">Sifat Akumulasi</th>
+                    <th className="p-3.5 min-w-[120px]">Hak Pegawai</th>
+                    <th className="p-3.5 w-24 text-center">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 text-gray-700">
+                  {filteredRegulasi.map((reg, idx) => (
+                    <tr key={reg.id} className="hover:bg-slate-50/70 transition-all">
+                      <td className="p-3.5 text-center font-mono text-gray-400">{idx + 1}</td>
+                      <td className="p-3.5">
+                        <div className="font-bold text-gray-900">{reg.namaJenis}</div>
+                        <div className="text-[10px] text-blue-600 font-mono font-bold">Kode: {reg.singkatan}</div>
+                      </td>
+                      <td className="p-3.5 font-mono font-semibold text-slate-800">{reg.kuotaStandar}</td>
+                      <td className="p-3.5 text-center">
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                          reg.satuanHari === 'Hari Kerja'
+                            ? 'bg-blue-50 text-blue-800 border border-blue-200'
+                            : 'bg-purple-50 text-purple-800 border border-purple-200'
+                        }`}>
+                          {reg.satuanHari}
+                        </span>
+                      </td>
+                      <td className="p-3.5">
+                        <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold inline-block border ${
+                          reg.pengaruhCutiTahunan === 'Mengurangi Cuti Tahunan'
+                            ? 'bg-blue-50 text-blue-800 border border-blue-200'
+                            : reg.pengaruhCutiTahunan === 'Menghilangkan Hak Cuti Tahunan'
+                              ? 'bg-rose-50 text-rose-800 border border-rose-200'
+                              : 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                        }`}>
+                          {reg.pengaruhCutiTahunan}
+                        </span>
+                      </td>
+                      <td className="p-3.5 text-slate-600 text-[11px] leading-relaxed">
+                        <div className="font-bold text-slate-800 text-[10px] uppercase font-mono text-blue-700 mb-0.5">
+                          {reg.urutanPemotongan}
+                        </div>
+                        <p className="line-clamp-2 text-slate-500">{reg.sistemPengurangan}</p>
+                      </td>
+                      <td className="p-3.5">
+                        <span className="text-[11px] font-mono text-slate-700">
+                          {reg.sifatAkumulasi}
+                        </span>
+                      </td>
+                      <td className="p-3.5">
+                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
+                          {reg.hakPegawai}
+                        </span>
+                      </td>
+                      <td className="p-3.5 text-center">
+                        <button
+                          onClick={() => setSelectedRegulasiModal(reg)}
+                          className="px-2.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold rounded-lg text-[10px] transition-all cursor-pointer flex items-center gap-1 mx-auto"
+                          title="Lihat Detail Pasal & Poin Regulasi"
+                        >
+                          <BookOpen className="w-3.5 h-3.5" />
+                          <span>Rincian</span>
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Kartu Rincian Regulasi Masing-Masing Jenis Cuti */}
+          <div className="space-y-4">
+            <h5 className="font-bold text-xs text-gray-800 uppercase tracking-wider flex items-center gap-2">
+              <BookOpen className="w-4 h-4 text-indigo-600" />
+              <span>Panduan Lengkap Sistem Pengurangan &amp; Ketentuan Regulasi Resmi</span>
+            </h5>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {filteredRegulasi.map(reg => (
+                <div key={reg.id} className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm space-y-4 hover:border-blue-300 transition-all">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-xs font-bold bg-blue-100 text-blue-800 px-2 py-0.5 rounded">
+                          {reg.singkatan}
+                        </span>
+                        <h4 className="text-sm font-extrabold text-gray-900">{reg.namaJenis}</h4>
+                      </div>
+                      <p className="text-[11px] text-gray-500 font-mono mt-1">
+                        Kuota Standar: <strong className="text-gray-800">{reg.kuotaStandar}</strong> • Satuan: <strong>{reg.satuanHari}</strong>
+                      </p>
+                    </div>
+
+                    <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold border shrink-0 ${
+                      reg.pengaruhCutiTahunan === 'Mengurangi Cuti Tahunan'
+                        ? 'bg-blue-50 text-blue-800 border-blue-200'
+                        : reg.pengaruhCutiTahunan === 'Menghilangkan Hak Cuti Tahunan'
+                          ? 'bg-rose-50 text-rose-800 border-rose-200'
+                          : 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                    }`}>
+                      {reg.pengaruhCutiTahunan}
+                    </span>
+                  </div>
+
+                  {/* Sistem Pengurangan */}
+                  <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-1.5 text-xs">
+                    <div className="font-bold text-slate-800 flex items-center gap-1.5 text-[11px]">
+                      <Scale className="w-3.5 h-3.5 text-blue-600" />
+                      <span>Sistem Pengurangan Kuota:</span>
+                    </div>
+                    <p className="text-slate-600 leading-relaxed text-[11px]">{reg.sistemPengurangan}</p>
+                    <div className="pt-1 text-[10px] font-mono text-blue-700">
+                      <strong>Alur:</strong> {reg.urutanPemotongan}
+                    </div>
+                  </div>
+
+                  {/* Poin Penting Regulasi BKN */}
+                  <div className="space-y-1.5">
+                    <div className="font-bold text-gray-700 text-[11px] uppercase tracking-wider font-mono">
+                      Ketentuan &amp; Poin Kritis Regulasi:
+                    </div>
+                    <ul className="space-y-1 text-xs text-gray-600">
+                      {reg.poinPenting.map((pt, pIdx) => (
+                        <li key={pIdx} className="flex items-start gap-2 leading-relaxed text-[11px]">
+                          <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
+                          <span>{pt}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  {/* Footer Card: Dasar Hukum & Aksi */}
+                  <div className="pt-3 border-t border-gray-100 flex items-center justify-between text-[10px] text-gray-500">
+                    <div className="truncate max-w-[260px]" title={reg.dasarHukum}>
+                      <strong>Dasar:</strong> {reg.dasarHukum}
+                    </div>
+                    <button
+                      onClick={() => setSelectedRegulasiModal(reg)}
+                      className="text-blue-600 hover:text-blue-800 font-bold flex items-center gap-1 cursor-pointer shrink-0"
+                    >
+                      <span>Buka Regulasi Lengkap</span>
+                      <ArrowRight className="w-3 h-3" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* DETAIL MODAL: RINCIAN KUOTA SEMUA JENIS CUTI PEGAWAI */}
       {selectedPegawaiDetail && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
@@ -898,6 +1213,34 @@ export default function SisaCutiView({
                           Komponen: {detail.keterangan}
                         </div>
                       )}
+
+                      {/* Aturan Pengurangan Kuota Badge & Link */}
+                      {(() => {
+                        const aturan = getAturanCuti(jc.nama);
+                        if (!aturan) return null;
+                        return (
+                          <div className="pt-2 border-t border-slate-200/80 flex items-center justify-between text-[10px]">
+                            <span className={`px-2 py-0.5 rounded font-bold border ${
+                              aturan.pengaruhCutiTahunan === 'Mengurangi Cuti Tahunan'
+                                ? 'bg-blue-50 text-blue-700 border-blue-200'
+                                : aturan.pengaruhCutiTahunan === 'Menghilangkan Hak Cuti Tahunan'
+                                  ? 'bg-rose-50 text-rose-700 border-rose-200'
+                                  : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                            }`}>
+                              {aturan.pengaruhCutiTahunan}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => setSelectedRegulasiModal(aturan)}
+                              className="text-blue-600 hover:text-blue-800 font-bold flex items-center gap-1 cursor-pointer"
+                              title="Lihat Aturan BKN"
+                            >
+                              <Scale className="w-3 h-3" />
+                              <span>Aturan BKN</span>
+                            </button>
+                          </div>
+                        );
+                      })()}
                     </div>
                   );
                 })}
@@ -1179,6 +1522,128 @@ export default function SisaCutiView({
                 className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-bold transition-all cursor-pointer"
               >
                 Hapus
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL DETAIL REGULASI & SISTEM PENGURANGAN KUOTA BKN */}
+      {selectedRegulasiModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
+          <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] flex flex-col shadow-2xl border border-gray-100 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            {/* Modal Header */}
+            <div className="p-5 bg-gradient-to-r from-blue-700 via-indigo-700 to-slate-800 text-white flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center font-bold text-base border border-white/20">
+                  <Scale className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs bg-white/20 px-2 py-0.5 rounded font-mono font-bold">
+                      {selectedRegulasiModal.singkatan}
+                    </span>
+                    <h4 className="font-bold text-sm tracking-wide">{selectedRegulasiModal.namaJenis}</h4>
+                  </div>
+                  <p className="text-[11px] text-blue-100">
+                    Sistem Pengurangan Kuota &amp; Kepatuhan Regulasi BKN
+                  </p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setSelectedRegulasiModal(null)}
+                className="p-1.5 text-white/80 hover:text-white hover:bg-white/10 rounded-lg transition-all cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 overflow-y-auto space-y-4 text-xs text-gray-700 custom-scrollbar">
+              {/* Badges overview */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
+                <div className="bg-slate-50 border border-slate-200 p-2.5 rounded-xl">
+                  <div className="text-[9px] font-bold text-gray-400 uppercase font-mono">Batas Kuota</div>
+                  <div className="text-xs font-black text-slate-800 mt-0.5">{selectedRegulasiModal.kuotaStandar}</div>
+                </div>
+
+                <div className="bg-slate-50 border border-slate-200 p-2.5 rounded-xl">
+                  <div className="text-[9px] font-bold text-gray-400 uppercase font-mono">Satuan Hari</div>
+                  <div className="text-xs font-black text-blue-700 mt-0.5">{selectedRegulasiModal.satuanHari}</div>
+                </div>
+
+                <div className="bg-slate-50 border border-slate-200 p-2.5 rounded-xl">
+                  <div className="text-[9px] font-bold text-gray-400 uppercase font-mono">Pengaruh Cuti</div>
+                  <div className="text-[11px] font-black text-indigo-700 mt-0.5 truncate" title={selectedRegulasiModal.pengaruhCutiTahunan}>
+                    {selectedRegulasiModal.pengaruhCutiTahunan}
+                  </div>
+                </div>
+
+                <div className="bg-slate-50 border border-slate-200 p-2.5 rounded-xl">
+                  <div className="text-[9px] font-bold text-gray-400 uppercase font-mono">Hak Pegawai</div>
+                  <div className="text-[11px] font-black text-slate-800 mt-0.5">{selectedRegulasiModal.hakPegawai}</div>
+                </div>
+              </div>
+
+              {/* Sistem Pengurangan Saldo */}
+              <div className="bg-blue-50/70 border border-blue-200 p-4 rounded-xl space-y-2">
+                <h5 className="font-bold text-xs text-blue-950 flex items-center gap-1.5 uppercase tracking-wider font-mono">
+                  <Scale className="w-4 h-4 text-blue-600" />
+                  <span>Mekanisme Pengurangan Saldo di Sistem</span>
+                </h5>
+                <p className="text-blue-900 leading-relaxed text-xs">
+                  {selectedRegulasiModal.sistemPengurangan}
+                </p>
+                <div className="pt-1 text-[11px] text-blue-800 font-mono">
+                  <strong>Urutan Pemotongan:</strong> {selectedRegulasiModal.urutanPemotongan}
+                </div>
+              </div>
+
+              {/* Poin Kritis Regulasi BKN */}
+              <div className="space-y-2">
+                <h5 className="font-bold text-xs text-gray-800 uppercase tracking-wider font-mono flex items-center gap-1.5">
+                  <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                  <span>Ketentuan Kepatuhan Regulasi Resmi (BKN &amp; PP)</span>
+                </h5>
+                <div className="bg-slate-50 border border-slate-200 p-3.5 rounded-xl space-y-2">
+                  {selectedRegulasiModal.poinPenting.map((pt, pIdx) => (
+                    <div key={pIdx} className="flex items-start gap-2.5 text-xs text-slate-700 leading-relaxed">
+                      <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
+                      <span>{pt}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Syarat Masa Kerja & Dasar Hukum */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                <div className="bg-slate-50 border border-slate-200 p-3 rounded-xl space-y-1">
+                  <div className="text-[10px] font-bold text-gray-500 uppercase font-mono">Syarat Masa Kerja</div>
+                  <div className="text-xs font-semibold text-gray-800">{selectedRegulasiModal.syaratMasaKerja}</div>
+                </div>
+
+                <div className="bg-slate-50 border border-slate-200 p-3 rounded-xl space-y-1">
+                  <div className="text-[10px] font-bold text-gray-500 uppercase font-mono">Sifat Akumulasi Saldo</div>
+                  <div className="text-xs font-semibold text-gray-800">{selectedRegulasiModal.sifatAkumulasi}</div>
+                </div>
+              </div>
+
+              <div className="bg-slate-100 p-3 rounded-xl border border-slate-200 text-[11px] text-slate-600 font-mono">
+                <strong className="text-slate-800">Dasar Hukum:</strong> {selectedRegulasiModal.dasarHukum}
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 border-t border-gray-100 bg-gray-50 flex items-center justify-between">
+              <span className="text-[11px] text-gray-500 italic">
+                Sistem SIP-CUTI Setda Demak terintegrasi kepatuhan BKN.
+              </span>
+              <button
+                type="button"
+                onClick={() => setSelectedRegulasiModal(null)}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition-all cursor-pointer"
+              >
+                Tutup Panduan
               </button>
             </div>
           </div>

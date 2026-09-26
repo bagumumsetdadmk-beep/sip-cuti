@@ -33,6 +33,7 @@ import SearchableSelect from './SearchableSelect';
 import { supabase } from '../lib/supabase';
 import { filterPengajuanByRole } from '../lib/pengajuanFilters';
 import { getStorageFilePath } from '../lib/utils';
+import { getAturanCuti } from '../lib/regulasiCuti';
 
 interface PengajuanCutiViewProps {
   pengajuan: PengajuanCuti[];
@@ -126,10 +127,13 @@ export default function PengajuanCutiView({
       const status = selectedPegawai.statusPegawai;
       const namaCuti = jc.nama.toLowerCase();
 
-      // 1. Aturan PPPK: Hanya boleh Tahunan, Sakit, Melahirkan
-      if (status.includes('PPPK')) {
-        const allowed = ['tahunan', 'sakit', 'melahirkan'];
-        return allowed.some(a => namaCuti.includes(a));
+      // 1. Aturan Pegawai Non-PNS (PPPK & PPPK PW):
+      // Menurut Perka BKN & PP No. 49/2018, PPPK hanya berhak atas Cuti Tahunan, Cuti Sakit, Cuti Melahirkan.
+      // Cuti Alasan Penting, Cuti Besar, dan CLTN HANYA KHUSUS UNTUK PNS.
+      if (status !== 'PNS') {
+        if (jc.hakPegawai === 'PNS' || namaCuti.includes('penting') || namaCuti.includes('besar') || namaCuti.includes('tanggungan')) {
+          return false;
+        }
       }
 
       // 2. Aturan PNS: Sembunyikan Cuti Besar jika Masa Kerja < 5 Tahun
@@ -477,11 +481,16 @@ export default function PengajuanCutiView({
       }
     }
 
-    // Validasi Hak Jenis Cuti (PPPK tidak boleh Cuti Besar atau CLTN)
-    const pegStatus = pegawai.find(p => p.id === formPegawaiId)?.statusPegawai;
-    const jcLimit = jenisCuti.find(jc => jc.id === formJenisCutiId)?.hakPegawai;
-    if (pegStatus === 'PPPK' && jcLimit === 'PNS') {
-      showToast('Pegawai berstatus PPPK tidak diperkenankan mengajukan jenis cuti ini menurut aturan BKN.', 'error');
+    // Validasi Hak Jenis Cuti (Cuti Alasan Penting, Cuti Besar, dan CLTN hanya untuk PNS)
+    const currentPeg = pegawai.find(p => p.id === formPegawaiId);
+    const pegStatus = currentPeg?.statusPegawai;
+    const targetJC = jenisCuti.find(jc => jc.id === formJenisCutiId);
+    const isPenting = targetJC?.nama.toLowerCase().includes('penting');
+    if (pegStatus !== 'PNS' && (targetJC?.hakPegawai === 'PNS' || isPenting)) {
+      showToast(
+        `Pegawai berstatus ${pegStatus || 'Non-PNS'} tidak diperkenankan mengajukan ${targetJC?.nama || 'cuti ini'}. Berdasarkan Perka BKN & PP No. 49/2018, Cuti Alasan Penting hanya diperuntukkan bagi PNS.`,
+        'error'
+      );
       return;
     }
 
@@ -750,6 +759,12 @@ export default function PengajuanCutiView({
 
             const days = Number(rawJumlahHari);
             const selesai = hitungTanggalSelesai(formattedMulai, days, targetJenis.id);
+
+            // Validasi: Cuti Alasan Penting, Cuti Besar, CLTN hanya untuk PNS
+            if (targetPegawai.statusPegawai !== 'PNS' && (targetJenis.hakPegawai === 'PNS' || targetJenis.nama.toLowerCase().includes('penting') || targetJenis.nama.toLowerCase().includes('besar') || targetJenis.nama.toLowerCase().includes('tanggungan'))) {
+              failCount++;
+              continue;
+            }
 
             await addPengajuan({
               pegawaiId: targetPegawai.id,
@@ -1307,6 +1322,37 @@ export default function PengajuanCutiView({
                       Silakan pilih pegawai dan jenis cuti terlebih dahulu untuk memuat kalkulasi sisa kuota.
                     </p>
                   )}
+                  {formJenisCutiId && (() => {
+                    const currentJc = jenisCuti.find(j => j.id === formJenisCutiId);
+                    const aturan = currentJc ? getAturanCuti(currentJc.nama) : null;
+                    if (!aturan) return null;
+
+                    return (
+                      <div className="mt-3 p-3 bg-white rounded-lg border border-slate-200 space-y-1.5 text-[11px]">
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-slate-800 flex items-center gap-1.5 font-mono">
+                            <Scale className="w-3.5 h-3.5 text-blue-600" />
+                            <span>Sistem Pengurangan Kuota: {aturan.namaJenis}</span>
+                          </span>
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
+                            aturan.pengaruhCutiTahunan === 'Mengurangi Cuti Tahunan'
+                              ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                              : aturan.pengaruhCutiTahunan === 'Menghilangkan Hak Cuti Tahunan'
+                                ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                                : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                          }`}>
+                            {aturan.pengaruhCutiTahunan}
+                          </span>
+                        </div>
+                        <p className="text-slate-600 leading-relaxed">{aturan.sistemPengurangan}</p>
+                        <div className="text-[10px] text-slate-500 font-mono flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-slate-100">
+                          <span><strong>Hak Pegawai:</strong> <span className={aturan.hakPegawai.includes('Khusus PNS') ? 'text-blue-700 font-bold' : ''}>{aturan.hakPegawai}</span></span>
+                          <span><strong>Alur Pemotongan:</strong> {aturan.urutanPemotongan}</span>
+                          <span><strong>Satuan:</strong> {aturan.satuanHari}</span>
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
 
                 {/* INFO ATURAN PENGAJUAN & BATASAN 3 HARI */}
