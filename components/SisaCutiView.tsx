@@ -727,13 +727,13 @@ export default function SisaCutiView({
                     {jenisCuti.map(jc => {
                       const aturan = getAturanCuti(jc.nama);
                       return (
-                        <th key={jc.id} className="p-3.5 text-center min-w-[135px] border-l border-slate-200/60">
+                        <th key={jc.id} className="p-3.5 text-center min-w-[135px] border-l border-slate-200/60 whitespace-normal">
                           <div className="flex items-center justify-center gap-1">
-                            <span className="font-bold text-slate-800 line-clamp-1" title={jc.nama}>{jc.nama}</span>
+                            <span className="font-bold text-slate-800 whitespace-normal break-words leading-tight" title={jc.nama}>{jc.nama}</span>
                             {aturan && (
                               <button
                                 onClick={() => setSelectedRegulasiModal(aturan)}
-                                className="text-blue-500 hover:text-blue-700 p-0.5 rounded hover:bg-blue-100 cursor-pointer"
+                                className="text-blue-500 hover:text-blue-700 p-0.5 rounded hover:bg-blue-100 cursor-pointer shrink-0"
                                 title={`Pelajari Aturan Pengurangan Kuota ${jc.nama} (BKN)`}
                               >
                                 <Scale className="w-3.5 h-3.5" />

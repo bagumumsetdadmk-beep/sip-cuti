@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Search, Printer, FileSpreadsheet } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { Search, Printer } from 'lucide-react';
 import { Pegawai, JenisCuti, PengaturanUser } from '../lib/types';
+import Pagination from './Pagination';
 
 interface RekapCutiViewProps {
   pegawai: Pegawai[];
@@ -20,16 +21,42 @@ export default function RekapCutiView({ pegawai, jenisCuti, dapatkanRekapCuti, c
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedYear, setSelectedYear] = useState<number>(currentYear);
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+  const [itemsPerPage, setItemsPerPage] = useState(10);
   
-  const rekapData = dapatkanRekapCuti(selectedYear);
+  const rekapData = useMemo(() => dapatkanRekapCuti(selectedYear), [dapatkanRekapCuti, selectedYear]);
 
-  const filteredRekap = rekapData.filter(item => {
-    const s = searchTerm.toLowerCase();
-    return item.pegawai.nama.toLowerCase().includes(s) || 
-           item.pegawai.nip.includes(s) || 
-           item.pegawai.unitKerja.toLowerCase().includes(s);
-  });
+  const filteredRekap = useMemo(() => {
+    const s = searchTerm.toLowerCase().trim();
+    if (!s) return rekapData;
+    return rekapData.filter(item => {
+      return item.pegawai.nama.toLowerCase().includes(s) || 
+             item.pegawai.nip.includes(s) || 
+             item.pegawai.unitKerja.toLowerCase().includes(s);
+    });
+  }, [rekapData, searchTerm]);
+
+  const totalPages = Math.ceil(filteredRekap.length / itemsPerPage) || 1;
+  const safeCurrentPage = Math.min(Math.max(currentPage, 1), totalPages);
+
+  const paginatedRekap = useMemo(() => {
+    const start = (safeCurrentPage - 1) * itemsPerPage;
+    return filteredRekap.slice(start, start + itemsPerPage);
+  }, [filteredRekap, safeCurrentPage, itemsPerPage]);
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(e.target.value);
+    setCurrentPage(1);
+  };
+
+  const handleYearChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setSelectedYear(Number(e.target.value));
+    setCurrentPage(1);
+  };
+
+  const handleItemsPerPageChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setItemsPerPage(Number(e.target.value));
+    setCurrentPage(1);
+  };
 
   const handlePrint = () => {
     window.print();
@@ -66,7 +93,7 @@ export default function RekapCutiView({ pegawai, jenisCuti, dapatkanRekapCuti, c
               type="text"
               placeholder="Cari nama, NIP, unit kerja..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={handleSearchChange}
               className="w-full bg-gray-50 border border-gray-200 rounded-lg pl-9 pr-4 py-1.5 text-xs text-gray-700 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
             />
           </div>
@@ -75,7 +102,7 @@ export default function RekapCutiView({ pegawai, jenisCuti, dapatkanRekapCuti, c
             <label className="text-xs font-semibold text-gray-600 whitespace-nowrap">Tahun:</label>
             <select
               value={selectedYear}
-              onChange={(e) => setSelectedYear(Number(e.target.value))}
+              onChange={handleYearChange}
               className="bg-gray-50 border border-gray-200 text-gray-700 text-xs rounded-lg px-3 py-1.5 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 font-semibold"
             >
               {availableYears.map(yr => (
@@ -83,6 +110,20 @@ export default function RekapCutiView({ pegawai, jenisCuti, dapatkanRekapCuti, c
                   {yr} {yr === currentYear ? '(Tahun Berjalan)' : ''}
                 </option>
               ))}
+            </select>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <label className="text-xs font-semibold text-gray-600 whitespace-nowrap">Tampilkan:</label>
+            <select
+              value={itemsPerPage}
+              onChange={handleItemsPerPageChange}
+              className="bg-gray-50 border border-gray-200 text-gray-700 text-xs rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+            >
+              <option value={10}>10 per halaman</option>
+              <option value={25}>25 per halaman</option>
+              <option value={50}>50 per halaman</option>
+              <option value={100}>100 per halaman</option>
             </select>
           </div>
         </div>
@@ -105,13 +146,13 @@ export default function RekapCutiView({ pegawai, jenisCuti, dapatkanRekapCuti, c
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
-              <tr className="bg-gray-50 text-gray-600 font-bold border-b border-gray-200">
-                <th className="p-3 border border-gray-200">No</th>
-                <th className="p-3 border border-gray-200">NIP & Nama Pegawai</th>
-                <th className="p-3 border border-gray-200">Unit Kerja</th>
+              <tr className="bg-gray-50 text-gray-700 font-bold border-b border-gray-200">
+                <th className="p-3 text-center border border-gray-200 w-12 whitespace-nowrap">No</th>
+                <th className="p-3 border border-gray-200 min-w-[180px] whitespace-normal">NIP &amp; Nama Pegawai</th>
+                <th className="p-3 border border-gray-200 min-w-[140px] whitespace-normal">Unit Kerja</th>
                 {jenisCuti.map(jc => (
-                  <th key={jc.id} className="p-3 text-center border border-gray-200 max-w-24">
-                    <p className="line-clamp-2 leading-tight">{jc.nama}</p>
+                  <th key={jc.id} className="p-2.5 text-center border border-gray-200 min-w-[90px] max-w-[140px] whitespace-normal break-words leading-snug">
+                    <span className="inline-block whitespace-normal break-words">{jc.nama}</span>
                   </th>
                 ))}
               </tr>
@@ -124,9 +165,11 @@ export default function RekapCutiView({ pegawai, jenisCuti, dapatkanRekapCuti, c
                   </td>
                 </tr>
               ) : (
-                filteredRekap.map((item, idx) => (
+                paginatedRekap.map((item, idx) => (
                   <tr key={item.pegawai.id} className="hover:bg-gray-50/50 transition-all">
-                    <td className="p-3 font-mono text-gray-400 border border-gray-200">{idx + 1}</td>
+                    <td className="p-3 font-mono text-gray-400 border border-gray-200 text-center">
+                      {(safeCurrentPage - 1) * itemsPerPage + idx + 1}
+                    </td>
                     <td className="p-3 border border-gray-200">
                       <div className="font-bold text-gray-950 leading-tight">{item.pegawai.nama}</div>
                       <div className="text-[9px] text-gray-400 font-mono mt-0.5">NIP. {item.pegawai.nip} ({item.pegawai.statusPegawai})</div>
@@ -155,6 +198,17 @@ export default function RekapCutiView({ pegawai, jenisCuti, dapatkanRekapCuti, c
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Pagination Navigation */}
+        <div className="no-print mt-2">
+          <Pagination
+            currentPage={safeCurrentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+            totalItems={filteredRekap.length}
+            itemsPerPage={itemsPerPage}
+          />
         </div>
 
         {/* Tanda Tangan Cetak */}

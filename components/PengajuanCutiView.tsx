@@ -215,6 +215,7 @@ export default function PengajuanCutiView({
         sisaN: detail.hasCutiBesarThisYear ? 0 : validN,
         rawSisaN2: rawN2,
         rawSisaN1: rawN1,
+        rawSisaN: rawN,
         nama: jc.nama
       };
     }
@@ -250,6 +251,15 @@ export default function PengajuanCutiView({
     }).reduce((acc, curr) => acc + (curr.jumlahHari || 0), 0) : 0;
 
     if (isTahunan) {
+      const sc = sisaCuti.find(s => s.pegawaiId === formPegawaiId);
+      const rawN2 = sc?.sisaN2 !== undefined ? sc.sisaN2 : 0;
+      const rawN1 = sc?.sisaN1 !== undefined ? sc.sisaN1 : 0;
+      const rawN = sc?.sisaN !== undefined ? sc.sisaN : 12;
+
+      const validN2 = (rawN2 >= 12 && rawN1 >= 12) ? 6 : 0;
+      const validN1 = rawN1 >= 6 ? 6 : Math.max(0, rawN1);
+      const validN = Math.max(0, rawN);
+
       if (hasCutiBesarThisYear) {
         return {
           isTahunan: true,
@@ -261,22 +271,14 @@ export default function PengajuanCutiView({
           sisaN2: 0,
           sisaN1: 0,
           sisaN: 0,
-          rawSisaN2: 0,
-          rawSisaN1: 0,
+          rawSisaN2: rawN2,
+          rawSisaN1: rawN1,
+          rawSisaN: rawN,
           satuan: 'Hari Kerja' as const,
           nama: jc.nama,
           keterangan: `TIDAK BERHAK: Pegawai telah mengambil Cuti Besar pada tahun berjalan (${currentLeaveYear}). Hak Cuti Tahunan gugur.`
         };
       }
-
-      const sc = sisaCuti.find(s => s.pegawaiId === formPegawaiId);
-      const rawN2 = sc?.sisaN2 !== undefined ? sc.sisaN2 : 0;
-      const rawN1 = sc?.sisaN1 !== undefined ? sc.sisaN1 : 0;
-      const rawN = sc?.sisaN !== undefined ? sc.sisaN : 12;
-
-      const validN2 = (rawN2 >= 12 && rawN1 >= 12) ? 6 : 0;
-      const validN1 = rawN1 >= 6 ? 6 : Math.max(0, rawN1);
-      const validN = Math.max(0, rawN);
 
       const totalSisa = hitungTotalCutiTahunan(sc);
       const kuotaAwal = totalSisa + terpakai;
@@ -292,6 +294,7 @@ export default function PengajuanCutiView({
         sisaN: validN,
         rawSisaN2: rawN2,
         rawSisaN1: rawN1,
+        rawSisaN: rawN,
         satuan: 'Hari Kerja' as const,
         nama: jc.nama,
         keterangan: 'Dapat Diakumulasikan (Maks 24 Hari)'
@@ -1431,28 +1434,38 @@ export default function PengajuanCutiView({
                           <div className="grid grid-cols-3 gap-3">
                             <div className="bg-[#FFF9E6] border border-[#FDEB8D] rounded-lg p-3 text-center">
                               <div className="text-[10px] font-bold text-[#A85800] uppercase mb-0.5">SISA {currentLeaveYear - 2} (N-2)</div>
-                              <div className="text-xl font-black text-[#8A4600]">{selectedQuotaInfo.sisaN2} <span className="text-xs font-normal">Hari</span></div>
+                              <div className="text-xl font-black text-[#8A4600]">{selectedQuotaInfo.rawSisaN2 ?? 0} <span className="text-xs font-normal">Hari</span></div>
                               <div className="text-[9px] text-[#A85800]/90 mt-0.5">
-                                {selectedQuotaInfo.sisaN2 > 0 
-                                  ? 'Diakui 6 hari (Utuh 2 thn)' 
-                                  : selectedQuotaInfo.rawSisaN2 > 0 
-                                    ? `Hangus (${selectedQuotaInfo.rawSisaN2} hr < 12)` 
-                                    : '0 hari (Tidak ada sisa)'}
+                                {selectedQuotaInfo.hasCutiBesarThisYear
+                                  ? 'Gugur (Ambil Cuti Besar)'
+                                  : (selectedQuotaInfo.rawSisaN2 >= 12 && selectedQuotaInfo.rawSisaN1 >= 12)
+                                    ? 'Diakui 6 hari (Utuh 2 thn)' 
+                                    : (selectedQuotaInfo.rawSisaN2 > 0)
+                                      ? `Hangus (${selectedQuotaInfo.rawSisaN2} hr < 12)` 
+                                      : '0 hari (Tidak ada sisa)'}
                               </div>
                             </div>
                             <div className="bg-[#E6F8F0] border border-[#A6E8C3] rounded-lg p-3 text-center">
                               <div className="text-[10px] font-bold text-[#006037] uppercase mb-0.5">SISA {currentLeaveYear - 1} (N-1)</div>
-                              <div className="text-xl font-black text-[#004729]">{selectedQuotaInfo.sisaN1} <span className="text-xs font-normal">Hari</span></div>
+                              <div className="text-xl font-black text-[#004729]">{selectedQuotaInfo.rawSisaN1 ?? 0} <span className="text-xs font-normal">Hari</span></div>
                               <div className="text-[9px] text-[#006037]/90 mt-0.5">
-                                {selectedQuotaInfo.rawSisaN1 >= 6 
-                                  ? `Maks. 6 hari (sisa riil ${selectedQuotaInfo.rawSisaN1} hr)` 
-                                  : `Diakui riil (${selectedQuotaInfo.rawSisaN1} hr)`}
+                                {selectedQuotaInfo.hasCutiBesarThisYear
+                                  ? 'Gugur (Ambil Cuti Besar)'
+                                  : (selectedQuotaInfo.rawSisaN1 >= 6)
+                                    ? `Diakui maks. 6 hari (sisa riil ${selectedQuotaInfo.rawSisaN1} hr)` 
+                                    : (selectedQuotaInfo.rawSisaN1 > 0)
+                                      ? `Diakui riil (${selectedQuotaInfo.rawSisaN1} hr)`
+                                      : '0 hari (Tidak ada sisa)'}
                               </div>
                             </div>
                             <div className="bg-[#EBF3FF] border border-[#A8C7FA] rounded-lg p-3 text-center">
-                              <div className="text-[10px] font-bold text-[#00388F] uppercase mb-0.5">KUOTA {currentLeaveYear} (N)</div>
-                              <div className="text-xl font-black text-[#002766]">{selectedQuotaInfo.sisaN} <span className="text-xs font-normal">Hari</span></div>
-                              <div className="text-[9px] text-[#00388F]/80 mt-0.5">Hak tahun berjalan</div>
+                              <div className="text-[10px] font-bold text-[#00388F] uppercase mb-0.5">SISA {currentLeaveYear} (N)</div>
+                              <div className="text-xl font-black text-[#002766]">{selectedQuotaInfo.rawSisaN ?? selectedQuotaInfo.sisaN ?? 12} <span className="text-xs font-normal">Hari</span></div>
+                              <div className="text-[9px] text-[#00388F]/80 mt-0.5">
+                                {selectedQuotaInfo.hasCutiBesarThisYear
+                                  ? 'Gugur (Ambil Cuti Besar)'
+                                  : 'Hak tahun berjalan (Maks. 12 hr)'}
+                              </div>
                             </div>
                           </div>
                         </div>
