@@ -83,7 +83,7 @@ export default function CetakCutiView({ pengajuan, pegawai, jenisCuti, sisaCuti,
       <div className={`space-y-6 ${selectedPrint ? 'no-print hidden md:block' : ''}`}>
         <div>
           <h3 className="text-base font-bold text-gray-800">Cetak Formulir Cuti ASN Resmi</h3>
-          <p className="text-xs text-gray-500">Pilih pengajuan cuti pegawai yang telah disetujui di bawah ini untuk menampilkan dan mencetak lembar formulir cuti format resmi BKN.</p>
+          <p className="text-xs text-gray-500">Pilih pengajuan cuti pegawai yang telah disetujui di bawah ini untuk menampilkan dan mencetak lembar formulir cuti.</p>
         </div>
 
         {/* Search */}
@@ -102,7 +102,6 @@ export default function CetakCutiView({ pengajuan, pegawai, jenisCuti, sisaCuti,
                 className="w-full bg-gray-50 border border-gray-200 rounded-lg pl-9 pr-4 py-1.5 text-xs text-gray-700 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
               />
             </div>
-            <span className="text-xs text-gray-400 font-mono hidden sm:inline">Hanya menampilkan pengajuan berstatus &quot;DISETUJUI&quot;</span>
           </div>
           <div className="flex items-center gap-4 text-xs font-medium text-gray-500 self-end md:self-auto shrink-0">
             <span>Total Disetujui: <strong className="text-gray-800">{disetujuiPengajuan.length}</strong></span>

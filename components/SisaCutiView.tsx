@@ -454,7 +454,7 @@ export default function SisaCutiView({
             <span>Manajemen Sisa Kuota Cuti Pegawai</span>
           </h3>
           <p className="text-xs text-gray-500">
-            Monitoring sisa kuota dan pemakaian seluruh jenis cuti ASN dalam satu tahun berjalan serta pengelolaan akumulasi Cuti Tahunan BKN (N, N-1, N-2).
+            Monitoring sisa kuota dan pemakaian seluruh jenis cuti ASN dalam satu tahun berjalan serta pengelolaan akumulasi Cuti Tahunan.
           </p>
         </div>
         
@@ -566,7 +566,7 @@ export default function SisaCutiView({
           }`}
         >
           <Scale className="w-4 h-4 text-emerald-600" />
-          <span>Sistem Pengurangan Kuota & Regulasi BKN</span>
+          <span>Regulasi Cuti Pegawai ASN</span>
           <span className="bg-emerald-100 text-emerald-800 text-[10px] px-2 py-0.5 rounded-full font-black">
             Identifikasi Regulasi
           </span>

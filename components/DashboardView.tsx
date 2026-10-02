@@ -210,7 +210,7 @@ export default function DashboardView({
               </span>
             </div>
             <p className="text-[11px] text-slate-500">
-              Pilih tahun untuk memfilter statistik permohonan cuti ASN
+              Pilih tahun untuk menampilkan statistik permohonan cuti ASN
             </p>
           </div>
         </div>
@@ -362,7 +362,7 @@ export default function DashboardView({
                 Grafik Statistik Pengajuan Cuti Bulanan
               </h4>
               <p className="text-[11px] text-slate-400">
-                Visualisasi jumlah permohonan vs permohonan disetujui (Tahun {chartYear})
+                Visualisasi jumlah permohonan - permohonan disetujui (Tahun {chartYear})
               </p>
             </div>
             <div className="flex items-center gap-3 text-[11px] font-semibold">

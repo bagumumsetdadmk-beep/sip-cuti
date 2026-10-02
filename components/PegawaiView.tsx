@@ -215,8 +215,8 @@ export default function PegawaiView({ pegawai, addPegawai, updatePegawai, delete
       {/* Header View */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h3 className="text-base font-bold text-gray-800">Daftar Pegawai ASN Setda Demak</h3>
-          <p className="text-xs text-gray-500">Kelola master data seluruh pegawai ASN (PNS & PPPK) di lingkungan Sekretariat Daerah.</p>
+          <h3 className="text-base font-bold text-gray-800">Daftar Pegawai</h3>
+          <p className="text-xs text-gray-500">Kelola master data pegawai ASN Setda Kab Demak.</p>
         </div>
         <div className="flex items-center gap-2">
           {isAdmin && (
