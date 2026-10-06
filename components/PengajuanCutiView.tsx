@@ -14,6 +14,7 @@ import {
   Calendar, 
   Info, 
   User, 
+  UserCheck,
   Check, 
   Ban, 
   RefreshCw,
@@ -2029,6 +2030,61 @@ export default function PengajuanCutiView({
                     <div>
                       <span className="text-[9px] font-bold text-gray-400 uppercase font-mono block">Alamat Selama Cuti</span>
                       <span className="text-xs font-semibold text-gray-600 block mt-0.5 truncate" title={selectedPj.alamatSelamaCuti}>{selectedPj.alamatSelamaCuti}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Bagian: Atasan Langsung & Pejabat Berwenang */}
+                <div className="space-y-3">
+                  <h5 className="text-[10px] font-black text-slate-400 uppercase tracking-widest font-mono flex items-center gap-1">
+                    <UserCheck className="w-3.5 h-3.5 text-blue-600" />
+                    Atasan Langsung & Pejabat Berwenang Sesuai Pengajuan
+                  </h5>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {/* Atasan Langsung */}
+                    <div className="p-3.5 bg-gradient-to-br from-blue-50/60 to-slate-50 border border-blue-100 rounded-xl space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[9px] font-bold text-blue-700 uppercase font-mono tracking-wider bg-blue-100/80 px-2 py-0.5 rounded border border-blue-200">
+                          Atasan Langsung
+                        </span>
+                        <span className="text-[9px] font-semibold text-slate-500 font-mono">
+                          Pertimbangan Cuti
+                        </span>
+                      </div>
+                      <div>
+                        <h6 className="font-bold text-xs text-gray-900 leading-tight">
+                          {getPegawaiNama(selectedPj.atasanId)}
+                        </h6>
+                        <p className="text-[10px] text-gray-500 font-mono mt-0.5">
+                          NIP. {getPegawaiNip(selectedPj.atasanId)}
+                        </p>
+                        <p className="text-[10px] text-gray-600 font-medium mt-1">
+                          {pegawai.find(p => p.id === selectedPj.atasanId)?.jabatan || 'Atasan Langsung'}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Pejabat Berwenang */}
+                    <div className="p-3.5 bg-gradient-to-br from-purple-50/60 to-slate-50 border border-purple-100 rounded-xl space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[9px] font-bold text-purple-700 uppercase font-mono tracking-wider bg-purple-100/80 px-2 py-0.5 rounded border border-purple-200">
+                          Pejabat Berwenang
+                        </span>
+                        <span className="text-[9px] font-semibold text-slate-500 font-mono">
+                          Keputusan Cuti
+                        </span>
+                      </div>
+                      <div>
+                        <h6 className="font-bold text-xs text-gray-900 leading-tight">
+                          {getPegawaiNama(selectedPj.pejabatId)}
+                        </h6>
+                        <p className="text-[10px] text-gray-500 font-mono mt-0.5">
+                          NIP. {getPegawaiNip(selectedPj.pejabatId)}
+                        </p>
+                        <p className="text-[10px] text-gray-600 font-medium mt-1">
+                          {pegawai.find(p => p.id === selectedPj.pejabatId)?.jabatan || 'Pejabat Berwenang Menyetujui'}
+                        </p>
+                      </div>
                     </div>
                   </div>
                 </div>
