@@ -113,7 +113,7 @@ export const initialSisaCutiTahunan: SisaCutiTahunan[] = [
   { id: 'sc-1', pegawaiId: 'peg-1', sisaN2: 6, sisaN1: 6, sisaN: 12, tahunN: new Date().getFullYear() },
   { id: 'sc-2', pegawaiId: 'peg-2', sisaN2: 4, sisaN1: 5, sisaN: 12, tahunN: new Date().getFullYear() },
   { id: 'sc-3', pegawaiId: 'peg-3', sisaN2: 3, sisaN1: 6, sisaN: 12, tahunN: new Date().getFullYear() },
-  { id: 'sc-4', pegawaiId: 'peg-4', sisaN2: 5, sisaN1: 4, sisaN: 12, tahunN: new Date().getFullYear() },
+  { id: 'sc-4', pegawaiId: 'peg-4', sisaN2: 5, sisaN1: 4, sisaN: 9, tahunN: new Date().getFullYear() },
   { id: 'sc-5', pegawaiId: 'peg-5', sisaN2: 0, sisaN1: 2, sisaN: 12, tahunN: new Date().getFullYear() }, // PPPK biasanya tidak berakumulasi sisaN2/N1 setebal PNS
   { id: 'sc-6', pegawaiId: 'peg-6', sisaN2: 6, sisaN1: 6, sisaN: 12, tahunN: new Date().getFullYear() }
 ];

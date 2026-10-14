@@ -642,6 +642,7 @@ export function useAppData() {
       }
     }
 
+    const prevPj = pengajuan.find(item => item.id === id);
     if (!error && data) {
       const mapped = mapPengajuan(data);
       if (p.pegawaiId !== undefined) mapped.pegawaiId = p.pegawaiId;
@@ -662,6 +663,30 @@ export function useAppData() {
       // Local state fallback in case of connection or table error
       setPengajuan(pengajuan.map(item => item.id === id ? { ...item, ...p } : item));
     }
+
+    // Penyesuaian kuota cuti tahunan jika pengajuan yang diedit/direvisi mengalami perubahan status atau hari
+    if (prevPj) {
+      const targetJCId = p.jenisCutiId || prevPj.jenisCutiId;
+      const jc = jenisCuti.find(j => j.id === targetJCId);
+      if (jc && jc.nama.toLowerCase().includes('tahunan')) {
+        const pjYear = (p.tanggalMulai || prevPj.tanggalMulai) ? new Date(p.tanggalMulai || prevPj.tanggalMulai).getFullYear() : new Date().getFullYear();
+        const oldStatus = prevPj.status;
+        const newStatus = p.status !== undefined ? p.status : oldStatus;
+
+        if (oldStatus === 'Disetujui' && newStatus !== 'Disetujui') {
+          await kembalikanSisaCutiTahunan(prevPj.pegawaiId, prevPj.jumlahHari, pjYear);
+        } else if (oldStatus !== 'Disetujui' && newStatus === 'Disetujui') {
+          await potongSisaCutiTahunan(p.pegawaiId || prevPj.pegawaiId, p.jumlahHari || prevPj.jumlahHari, pjYear);
+        } else if (oldStatus === 'Disetujui' && newStatus === 'Disetujui' && p.jumlahHari !== undefined && p.jumlahHari !== prevPj.jumlahHari) {
+          const diff = p.jumlahHari - prevPj.jumlahHari;
+          if (diff > 0) {
+            await potongSisaCutiTahunan(p.pegawaiId || prevPj.pegawaiId, diff, pjYear);
+          } else if (diff < 0) {
+            await kembalikanSisaCutiTahunan(p.pegawaiId || prevPj.pegawaiId, Math.abs(diff), pjYear);
+          }
+        }
+      }
+    }
   };
 
   const updatePengajuanStatus = async (id: string, status: PengajuanCuti['status'], catatan?: string) => {
@@ -674,19 +699,27 @@ export function useAppData() {
     }
 
     const { data, error } = await supabase.from('pengajuan_cuti').update(payload).eq('id', id).select().single();
+    let updatedPj: PengajuanCuti | null = null;
     if (!error && data) {
-      const updatedPj = mapPengajuan(data);
-      setPengajuan(pengajuan.map(item => item.id === id ? updatedPj : item));
+      updatedPj = mapPengajuan(data);
+    } else if (prevPj) {
+      updatedPj = { ...prevPj, status, catatanPerbaikan: catatan !== undefined ? catatan : prevPj.catatanPerbaikan };
+    }
 
-      const jc = jenisCuti.find(j => j.id === updatedPj.jenisCutiId);
+    if (updatedPj) {
+      setPengajuan(pengajuan.map(item => item.id === id ? updatedPj! : item));
+
+      const jc = jenisCuti.find(j => j.id === updatedPj!.jenisCutiId);
       if (jc && jc.nama.toLowerCase().includes('tahunan')) {
-        // Transition to Approved from non-Approved -> deduct from Sisa N
+        const pjYear = updatedPj.tanggalMulai ? new Date(updatedPj.tanggalMulai).getFullYear() : (updatedPj.tanggalPengajuan ? new Date(updatedPj.tanggalPengajuan).getFullYear() : new Date().getFullYear());
+        
+        // Dari non-Disetujui menjadi Disetujui -> potong saldo N terlebih dahulu
         if (status === 'Disetujui' && prevStatus !== 'Disetujui') {
-          await potongSisaCutiTahunan(updatedPj.pegawaiId, updatedPj.jumlahHari);
+          await potongSisaCutiTahunan(updatedPj.pegawaiId, updatedPj.jumlahHari, pjYear);
         }
-        // Transition from Approved to non-Approved -> add back to Sisa N
+        // Dari Disetujui dibatalkan / direvisi (status selain Disetujui) -> kembalikan kuota pada N (tahun berjalan)
         else if (status !== 'Disetujui' && prevStatus === 'Disetujui') {
-          await kembalikanSisaCutiTahunan(updatedPj.pegawaiId, updatedPj.jumlahHari);
+          await kembalikanSisaCutiTahunan(updatedPj.pegawaiId, updatedPj.jumlahHari, pjYear);
         }
       }
     }
@@ -702,11 +735,21 @@ export function useAppData() {
       }
     }
     const { error } = await supabase.from('pengajuan_cuti').delete().eq('id', id);
-    if (!error) setPengajuan(pengajuan.filter(item => item.id !== id));
+    setPengajuan(pengajuan.filter(item => item.id !== id));
+
+    // Jika pengajuan yang dibatalkan/dihapus sudah berstatus 'Disetujui', kembalikan kuotanya ke N (tahun berjalan)
+    if (target && target.status === 'Disetujui') {
+      const jc = jenisCuti.find(j => j.id === target.jenisCutiId);
+      if (jc && jc.nama.toLowerCase().includes('tahunan')) {
+        const pjYear = target.tanggalMulai ? new Date(target.tanggalMulai).getFullYear() : (target.tanggalPengajuan ? new Date(target.tanggalPengajuan).getFullYear() : new Date().getFullYear());
+        await kembalikanSisaCutiTahunan(target.pegawaiId, target.jumlahHari, pjYear);
+      }
+    }
   };
 
-  const potongSisaCutiTahunan = async (pegawaiId: string, jumlahHari: number) => {
-    const sc = sisaCuti.find(s => s.pegawaiId === pegawaiId);
+  const potongSisaCutiTahunan = async (pegawaiId: string, jumlahHari: number, tahun?: number) => {
+    const targetYear = tahun || new Date().getFullYear();
+    const sc = (tahun ? sisaCuti.find(s => s.pegawaiId === pegawaiId && s.tahunN === targetYear) : null) || sisaCuti.find(s => s.pegawaiId === pegawaiId);
     if (!sc || jumlahHari <= 0) return;
 
     let rem = jumlahHari;
@@ -714,7 +757,7 @@ export function useAppData() {
     let n1 = Math.max(0, sc.sisaN1 !== undefined ? sc.sisaN1 : 0);
     let n = Math.max(0, sc.sisaN !== undefined ? sc.sisaN : 12);
 
-    // Kebijakan Pemotongan Sisa Cuti Tahunan:
+    // Kebijakan Pemotongan Sisa Cuti Tahunan (Perka BKN No. 24/2017 & No. 7/2021):
     // 1. Memotong jatah tahun berjalan (N) terlebih dahulu sampai habis (0)
     if (n > 0 && rem > 0) {
       const potongN = Math.min(n, rem);
@@ -723,7 +766,6 @@ export function useAppData() {
     }
 
     // 2. Jika jatah N sudah habis, baru memotong sisa tahun sebelumnya (N-1)
-    // Sisa N-1 yang dapat digunakan: jika sisa >= 6 hari maka maksimal 6 hari, jika < 6 hari sebesar sisa riilnya
     if (n1 > 0 && rem > 0) {
       const potongN1 = Math.min(n1, rem);
       n1 -= potongN1;
@@ -742,42 +784,33 @@ export function useAppData() {
     
     if (!error && data) {
       setSisaCuti(sisaCuti.map(item => item.id === sc.id ? mapSisaCuti(data) : item));
+    } else {
+      setSisaCuti(sisaCuti.map(item => item.id === sc.id ? { ...item, sisaN2: n2, sisaN1: n1, sisaN: n } : item));
     }
   };
 
-  const kembalikanSisaCutiTahunan = async (pegawaiId: string, jumlahHari: number) => {
-    const sc = sisaCuti.find(s => s.pegawaiId === pegawaiId);
+  const kembalikanSisaCutiTahunan = async (pegawaiId: string, jumlahHari: number, tahun?: number) => {
+    const targetYear = tahun || new Date().getFullYear();
+    const sc = (tahun ? sisaCuti.find(s => s.pegawaiId === pegawaiId && s.tahunN === targetYear) : null) || sisaCuti.find(s => s.pegawaiId === pegawaiId);
     if (!sc || jumlahHari <= 0) return;
 
-    let rem = jumlahHari;
     let n2 = Math.max(0, sc.sisaN2 !== undefined ? sc.sisaN2 : 0);
     let n1 = Math.max(0, sc.sisaN1 !== undefined ? sc.sisaN1 : 0);
     let n = Math.max(0, sc.sisaN !== undefined ? sc.sisaN : 12);
 
-    // Urutan Pengembalian Kuota (kebalikan dari pemotongan):
-    // 1. Kembalikan ke N-2 jika sebelumnya terpotong (< 12)
-    if (n2 < 12 && rem > 0) {
-      const tambahN2 = Math.min(12 - n2, rem);
-      n2 += tambahN2;
-      rem -= tambahN2;
-    }
-    // 2. Kembalikan ke N-1 jika sebelumnya terpotong (< 12)
-    if (n1 < 12 && rem > 0) {
-      const tambahN1 = Math.min(12 - n1, rem);
-      n1 += tambahN1;
-      rem -= tambahN1;
-    }
-    // 3. Kembalikan ke N (sampai maksimal 12)
-    if (rem > 0) {
-      n = Math.min(12, n + rem);
-      rem = 0;
-    }
+    // Sesuai peraturan:
+    // Pengembalian kuota cuti tahunan yang sudah disetujui kemudian dibatalkan/direvisi pada tahun berjalan
+    // HANYA BISA DIKEMBALIKAN PADA KUOTA N SAJA (tahun berjalan / 2026), maksimal 12 hari kerja.
+    // Saldo N-1 dan N-2 sama sekali tidak boleh ditambah / diubah.
+    n = Math.min(12, n + jumlahHari);
 
     const payload = { sisa_n2: n2, sisa_n1: n1, sisa_n: n };
     const { data, error } = await supabase.from('sisa_cuti_tahunan').update(payload).eq('id', sc.id).select().single();
     
     if (!error && data) {
       setSisaCuti(sisaCuti.map(item => item.id === sc.id ? mapSisaCuti(data) : item));
+    } else {
+      setSisaCuti(sisaCuti.map(item => item.id === sc.id ? { ...item, sisaN2: n2, sisaN1: n1, sisaN: n } : item));
     }
   };
 
